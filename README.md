@@ -1,5 +1,7 @@
 <h1 align="center">Realtime Spotify Application ✨</h1>
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-green?style=for-the-badge&logo=render)](https://realtime-spotify-clone-test.onrender.com/)
+
 ![Demo App](/frontend/public/screenshot-for-readme.png)
 
 [Watch Full Tutorial on Youtube](https://youtu.be/4sbklcQ0EXc)
