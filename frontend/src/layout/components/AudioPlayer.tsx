@@ -26,9 +26,24 @@ const AudioPlayer = () => {
 
   // handle play/pause logic
   useEffect(() => {
-    if (isPlaying) audioRef.current?.play();
+    if (!isSignedIn) return;
+    if (isPlaying) audioRef.current?.play().catch(() => {});
     else audioRef.current?.pause();
-  }, [isPlaying]);
+  }, [isPlaying, isSignedIn]);
+
+  // advance to next song when current ends
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onEnded = () => {
+      if (isSignedIn) playNext();
+      else forcePause();
+    };
+
+    audio.addEventListener("ended", onEnded);
+    return () => audio.removeEventListener("ended", onEnded);
+  }, [playNext, isSignedIn, forcePause]);
 
   // handle song ends
   useEffect(() => {
