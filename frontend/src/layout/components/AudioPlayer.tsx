@@ -1,50 +1,63 @@
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { useEffect, useRef } from "react";
+import { useAuth, useClerk } from "@clerk/clerk-react";
 
 const AudioPlayer = () => {
-	const audioRef = useRef<HTMLAudioElement>(null);
-	const prevSongRef = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const prevSongRef = useRef<string | null>(null);
 
-	const { currentSong, isPlaying, playNext } = usePlayerStore();
+  const { currentSong, isPlaying, playNext, forcePause } = usePlayerStore();
 
-	// handle play/pause logic
-	useEffect(() => {
-		if (isPlaying) audioRef.current?.play();
-		else audioRef.current?.pause();
-	}, [isPlaying]);
+  const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
 
-	// handle song ends
-	useEffect(() => {
-		const audio = audioRef.current;
+  // block playback if not signed in
+  useEffect(() => {
+    if (isPlaying && !isSignedIn) {
+      forcePause();
+      // try Clerk modal; fallback to route
+      try {
+        openSignIn?.({});
+      } catch {
+        window.location.href = "/sign-in";
+      }
+    }
+  }, [isPlaying, isSignedIn, forcePause, openSignIn]);
 
-		const handleEnded = () => {
-			playNext();
-		};
+  // handle play/pause logic
+  useEffect(() => {
+    if (isPlaying) audioRef.current?.play();
+    else audioRef.current?.pause();
+  }, [isPlaying]);
 
-		audio?.addEventListener("ended", handleEnded);
+  // handle song ends
+  useEffect(() => {
+    if (!isSignedIn) return;
+    if (isPlaying) {
+      audioRef.current?.play().catch(() => {}); // avoid console warning
+    } else {
+      audioRef.current?.pause();
+    }
+  }, [isPlaying, isSignedIn]);
 
-		return () => audio?.removeEventListener("ended", handleEnded);
-	}, [playNext]);
+  // handle song changes
+  useEffect(() => {
+    if (!audioRef.current || !currentSong) return;
 
-	// handle song changes
-	useEffect(() => {
-		if (!audioRef.current || !currentSong) return;
+    const audio = audioRef.current;
+    const isSongChange = prevSongRef.current !== currentSong?.audioUrl;
 
-		const audio = audioRef.current;
+    if (isSongChange) {
+      audio.src = currentSong?.audioUrl;
+      audio.currentTime = 0;
+      prevSongRef.current = currentSong?.audioUrl;
 
-		// check if this is actually a new song
-		const isSongChange = prevSongRef.current !== currentSong?.audioUrl;
-		if (isSongChange) {
-			audio.src = currentSong?.audioUrl;
-			// reset the playback position
-			audio.currentTime = 0;
+      if (isPlaying && isSignedIn) {
+        audio.play().catch(() => {});
+      }
+    }
+  }, [currentSong, isPlaying, isSignedIn]);
 
-			prevSongRef.current = currentSong?.audioUrl;
-
-			if (isPlaying) audio.play();
-		}
-	}, [currentSong, isPlaying]);
-
-	return <audio ref={audioRef} />;
+  return <audio ref={audioRef} />;
 };
 export default AudioPlayer;

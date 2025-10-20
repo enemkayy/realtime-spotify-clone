@@ -14,6 +14,7 @@ interface PlayerStore {
 	togglePlay: () => void;
 	playNext: () => void;
 	playPrevious: () => void;
+	forcePause: () => void;
 }
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -155,4 +156,5 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 			}
 		}
 	},
+	forcePause: () => set({ isPlaying: false }),
 }));
