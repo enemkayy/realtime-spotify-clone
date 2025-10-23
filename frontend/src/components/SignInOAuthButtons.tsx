@@ -6,7 +6,10 @@ const SignInOAuthButtons = () => {
 
   const openSignInPanel = async () => {
     try {
-      await openSignIn?.({});
+      await openSignIn?.({
+        afterSignInUrl: "/auth-callback",
+        afterSignUpUrl: "/auth-callback",
+      });
     } catch {
       window.location.href = "/sign-in"; // fallback route
     }
