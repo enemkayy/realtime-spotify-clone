@@ -41,3 +41,24 @@ export interface User {
 	fullName: string;
 	imageUrl: string;
 }
+
+export interface AIMessage {
+	_id?: string;
+	role: "user" | "assistant";
+	content: string;
+	songs?: Song[];
+	metadata?: {
+		reason?: string;
+		mood?: string;
+		genre?: string;
+		matchScore?: number;
+	};
+	createdAt: Date;
+}
+
+export interface AISimilarResponse {
+	targetSong: Song;
+	reason: string;
+	matchCriteria: string[];
+	songs: Song[];
+}

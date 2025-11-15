@@ -9,8 +9,11 @@ import AdminPage from "./pages/admin/AdminPage";
 
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 function App() {
+	useAuthCheck();
+	
 	return (
 		<>
 			<Routes>

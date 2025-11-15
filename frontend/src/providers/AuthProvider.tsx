@@ -1,46 +1,41 @@
-import { axiosInstance } from "@/lib/axios";
+import { axiosInstance, setAxiosAuthToken } from "@/lib/axios";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const updateApiToken = (token: string | null) => {
-  if (token)
-    axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  else delete axiosInstance.defaults.headers.common["Authorization"];
-};
-
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { getToken, userId } = useAuth();
-  const { isLoaded: userLoaded, user } = useUser();
-  const [loading, setLoading] = useState(true);
-  const { checkAdminStatus } = useAuthStore();
-  const { initSocket, disconnectSocket } = useChatStore();
+	const { getToken, userId } = useAuth();
+	const { isLoaded: userLoaded, user } = useUser();
+	const [loading, setLoading] = useState(true);
+	const { checkAdminStatus } = useAuthStore();
+	const { initSocket, disconnectSocket } = useChatStore();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const token = await getToken();
-        updateApiToken(token);
-        if (token) {
-          await checkAdminStatus();
-          // init socket
-          if (userId) initSocket(userId);
-        }
-      } catch (error: any) {
-        updateApiToken(null);
-        console.log("Error in auth provider", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+	useEffect(() => {
+		// Setup axios to use Clerk token
+		setAxiosAuthToken(getToken);
 
-    initAuth();
+		const initAuth = async () => {
+			try {
+				const token = await getToken();
+				if (token) {
+					await checkAdminStatus();
+					// init socket
+					if (userId) initSocket(userId);
+				}
+			} catch (error: any) {
+				console.log("Error in auth provider", error);
+			} finally {
+				setLoading(false);
+			}
+		};
 
-    // clean up
-    return () => disconnectSocket();
-  }, [getToken, userId, checkAdminStatus, initSocket, disconnectSocket]);
+		initAuth();
+
+		// clean up
+		return () => disconnectSocket();
+	}, [getToken, userId, checkAdminStatus, initSocket, disconnectSocket]);
 
   // Sync profile khi dữ liệu Clerk thay đổi (tên, avatar, ...)
   useEffect(() => {

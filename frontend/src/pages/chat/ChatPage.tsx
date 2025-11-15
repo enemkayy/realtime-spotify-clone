@@ -7,9 +7,13 @@ import ChatHeader from "./components/ChatHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import MessageInput from "./components/MessageInput";
+import AIChatInterface from "./components/AIChatInterface";
 
 const formatTime = (date: string) => {
 	return new Date(date).toLocaleTimeString("en-US", {
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
 		hour12: true,
@@ -18,7 +22,7 @@ const formatTime = (date: string) => {
 
 const ChatPage = () => {
 	const { user } = useUser();
-	const { messages, selectedUser, fetchUsers, fetchMessages } = useChatStore();
+	const { messages, selectedUser, isAIChat, fetchUsers, fetchMessages } = useChatStore();
 
 	useEffect(() => {
 		if (user) fetchUsers();
@@ -39,7 +43,9 @@ const ChatPage = () => {
 
 				{/* chat message */}
 				<div className='flex flex-col h-full'>
-					{selectedUser ? (
+					{isAIChat ? (
+						<AIChatInterface />
+					) : selectedUser ? (
 						<>
 							<ChatHeader />
 
