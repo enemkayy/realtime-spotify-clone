@@ -1,6 +1,6 @@
 import { useAIChatStore } from "@/stores/useAIChatStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Loader, Send, Sparkles } from "lucide-react";
+import { Bot, Loader, Send, Sparkles, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
@@ -19,7 +19,7 @@ const formatTime = (date: Date) => {
 };
 
 const AIChatInterface = () => {
-	const { messages, isLoading, sendMessage, loadHistory } = useAIChatStore();
+	const { messages, isLoading, sendMessage, loadHistory, clearChat } = useAIChatStore();
 	const [input, setInput] = useState("");
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const { playAlbum } = usePlayerStore();
@@ -48,6 +48,12 @@ const AIChatInterface = () => {
 		}
 	};
 
+	const handleClearChat = async () => {
+		if (window.confirm("Are you sure you want to clear all chat history?")) {
+			await clearChat();
+		}
+	};
+
 	return (
 		<>
 			{/* Header */}
@@ -62,6 +68,17 @@ const AIChatInterface = () => {
 						Always online
 					</p>
 				</div>
+				{messages.length > 0 && (
+					<Button
+						variant='ghost'
+						size='icon'
+						onClick={handleClearChat}
+						className='hover:text-red-400 hover:bg-red-500/10'
+						title='Clear chat history'
+					>
+						<Trash2 className='size-4' />
+					</Button>
+				)}
 			</div>
 
 			{/* Messages */}
