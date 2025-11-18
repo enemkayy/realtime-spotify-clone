@@ -34,7 +34,7 @@ const TEMPOS = [
 ];
 
 const EditSongDialog = ({ song, isOpen, onClose }: EditSongDialogProps) => {
-	const { albums, fetchSongs } = useMusicStore();
+	const { albums, fetchSongs, fetchAlbums } = useMusicStore();
 	const [isLoading, setIsLoading] = useState(false);
 
 	const [editedSong, setEditedSong] = useState({
@@ -151,6 +151,7 @@ const EditSongDialog = ({ song, isOpen, onClose }: EditSongDialogProps) => {
 
 			toast.success("Song updated successfully");
 			await fetchSongs();
+			await fetchAlbums(); // Refresh albums to show updated songs
 			onClose();
 		} catch (error: any) {
 			console.error("Error updating song:", error);

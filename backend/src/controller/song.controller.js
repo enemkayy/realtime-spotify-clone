@@ -1,4 +1,5 @@
 import { Song } from "../models/song.model.js";
+import { Album } from "../models/album.model.js";
 import cloudinary from "../lib/cloudinary.js";
 
 // Helper function to extract Cloudinary public_id from URL
@@ -133,11 +134,15 @@ export const updateSong = async (req, res, next) => {
 		const song = await Song.findById(id);
 		if (!song) return res.status(404).json({ message: "Song not found" });
 
+		// Store old albumId before updating
+		const oldAlbumId = song.albumId;
+		const newAlbumId = albumId === "none" || !albumId ? null : albumId;
+
 		// Update basic fields
 		if (title) song.title = title;
 		if (artist) song.artist = artist;
 		if (duration) song.duration = parseInt(duration);
-		if (albumId !== undefined) song.albumId = albumId === "none" ? null : albumId;
+		if (albumId !== undefined) song.albumId = newAlbumId;
 
 		// Update metadata fields
 		if (description !== undefined) song.description = description || undefined;
@@ -190,6 +195,24 @@ export const updateSong = async (req, res, next) => {
 		}
 
 		await song.save();
+
+		// Handle album updates - only if albumId changed
+		if (oldAlbumId?.toString() !== newAlbumId?.toString()) {
+			// Remove song from old album if it existed
+			if (oldAlbumId) {
+				await Album.findByIdAndUpdate(oldAlbumId, {
+					$pull: { songs: song._id },
+				});
+			}
+
+			// Add song to new album if specified
+			if (newAlbumId) {
+				await Album.findByIdAndUpdate(newAlbumId, {
+					$addToSet: { songs: song._id }, // $addToSet prevents duplicates
+				});
+			}
+		}
+
 		res.json(song);
 	} catch (error) {
 		console.log("Error in updateSong:", error);
