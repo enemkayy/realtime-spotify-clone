@@ -176,7 +176,12 @@ export const generateMusicRecommendation = async (userPrompt, context) => {
     const songsInfo = context.songs
       .map(
         (s, idx) =>
-          `${idx + 1}. Title: "${s.title}", Artist: "${s.artist}", ID: ${s.id}`
+          `${idx + 1}. "${s.title}" by ${s.artist}
+       - Mood: ${s.mood?.join(", ") || "N/A"}
+       - Genre: ${s.genre || "N/A"}
+       - Tags: ${s.tags?.join(", ") || "N/A"}
+       - Description: ${s.description || "N/A"}
+       - ID: ${s.id}`
       )
       .join("\n");
 

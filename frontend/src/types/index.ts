@@ -2,6 +2,12 @@ export interface Song {
 	_id: string;
 	title: string;
 	artist: string;
+	description?: string;
+	tags?: string[];
+	mood?: string[];
+	genre?: string;
+	tempo?: "slow" | "medium" | "fast";
+	language?: string;
 	albumId: string | null;
 	imageUrl: string;
 	audioUrl: string;
