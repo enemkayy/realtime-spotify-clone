@@ -107,6 +107,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				});
 			});
 
+			socket.on("message_error", (error: string) => {
+				console.error("Message error:", error);
+				// You can show a toast here if needed
+				// toast.error(error);
+			});
+
 			set({ isConnected: true });
 		}
 	},

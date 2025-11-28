@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { Message } from "../models/message.model.js";
+import { User } from "../models/user.model.js";
 
 export const initializeSocket = (server) => {
 	const io = new Server(server, {
@@ -35,9 +36,34 @@ export const initializeSocket = (server) => {
 			try {
 				const { senderId, receiverId, content } = data;
 
+				// senderId and receiverId are Clerk IDs, need to find MongoDB users for validation
+				const sender = await User.findOne({ clerkId: senderId });
+				const receiver = await User.findOne({ clerkId: receiverId });
+
+				if (!sender) {
+					socket.emit("message_error", "Sender not found");
+					return;
+				}
+
+				if (!receiver) {
+					socket.emit("message_error", "Receiver not found");
+					return;
+				}
+
+				// Check if receiver is in sender's friends list (using MongoDB _id)
+				const areFriends = sender.friends.some(
+					(friendId) => friendId.toString() === receiver._id.toString()
+				);
+
+				if (!areFriends) {
+					socket.emit("message_error", "You can only send messages to your friends");
+					return;
+				}
+
+				// Save message with Clerk IDs (as per Message model schema)
 				const message = await Message.create({
-					senderId,
-					receiverId,
+					senderId: senderId,
+					receiverId: receiverId,
 					content,
 				});
 

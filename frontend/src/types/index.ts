@@ -46,6 +46,7 @@ export interface User {
 	clerkId: string;
 	fullName: string;
 	imageUrl: string;
+	closeFriends?: string[] | { clerkId: string }[];
 }
 
 export interface AIMessage {
