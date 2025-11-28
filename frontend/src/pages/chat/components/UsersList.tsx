@@ -2,10 +2,12 @@ import UsersListSkeleton from "@/components/skeletons/UsersListSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "@/stores/useChatStore";
+import { useFriendStore } from "@/stores/useFriendStore";
 import { Bot } from "lucide-react";
 
 const UsersList = () => {
-	const { users, selectedUser, isLoading, setSelectedUser, onlineUsers, isAIChat, setAIChat } = useChatStore();
+	const { selectedUser, setSelectedUser, onlineUsers, isAIChat, setAIChat } = useChatStore();
+	const { friends, isLoading } = useFriendStore();
 
 	const handleSelectAI = () => {
 		setAIChat(true);
@@ -46,11 +48,16 @@ const UsersList = () => {
 						{/* Divider */}
 						<div className='border-t border-zinc-700 my-2' />
 
-						{/* Real users */}
+						{/* Real users - Only friends */}
 						{isLoading ? (
 							<UsersListSkeleton />
+						) : friends.length === 0 ? (
+							<div className='text-center text-zinc-400 text-sm py-4'>
+								<p>No friends yet</p>
+								<p className='text-xs mt-1'>Add friends to start chatting</p>
+							</div>
 						) : (
-							users.map((user) => (
+							friends.map((user) => (
 								<div
 									key={user._id}
 									onClick={() => handleSelectUser(user)}

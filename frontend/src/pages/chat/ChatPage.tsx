@@ -1,5 +1,6 @@
 import Topbar from "@/components/Topbar";
 import { useChatStore } from "@/stores/useChatStore";
+import { useFriendStore } from "@/stores/useFriendStore";
 import { useUser } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import UsersList from "./components/UsersList";
@@ -22,11 +23,16 @@ const formatTime = (date: string) => {
 
 const ChatPage = () => {
 	const { user } = useUser();
-	const { messages, selectedUser, isAIChat, fetchUsers, fetchMessages } = useChatStore();
+	const { messages, selectedUser, isAIChat, fetchMessages } = useChatStore();
+	const { fetchFriends } = useFriendStore();
 
 	useEffect(() => {
-		if (user) fetchUsers();
-	}, [fetchUsers, user]);
+		if (user) {
+			fetchFriends().catch(err => {
+				console.error("Failed to fetch friends:", err);
+			});
+		}
+	}, [fetchFriends, user]);
 
 	useEffect(() => {
 		if (selectedUser) fetchMessages(selectedUser.clerkId);

@@ -21,9 +21,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await axiosInstance.get("/admin/check");
             set({ isAdmin: response.data.isAdmin });
         } catch (error: any) {
-            // Safe error handling
+            // Safe error handling - don't crash the app if backend is down
             const errorMsg = error.response?.data?.message || "Failed to check admin status";
-            set({ isAdmin: false, error: errorMsg });
+            console.warn("Admin check failed:", errorMsg);
+            set({ isAdmin: false, error: null }); // Clear error to prevent UI issues
         } finally {
             set({ isLoading: false });
         }
