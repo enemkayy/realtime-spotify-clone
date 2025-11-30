@@ -134,7 +134,6 @@ const AddFriendDialog = ({ open, onOpenChange }: AddFriendDialogProps) => {
 
 									<div className="flex-1 min-w-0">
 										<p className="font-medium text-white truncate">{user.fullName}</p>
-										<p className="text-xs text-zinc-400 truncate">@{user.clerkId}</p>
 									</div>
 
 									{getRelationshipButton(user)}

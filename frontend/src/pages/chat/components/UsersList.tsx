@@ -32,8 +32,12 @@ const UsersList = () => {
 								${isAIChat ? "bg-zinc-800" : "hover:bg-zinc-800/50"}`}
 						>
 							<div className='relative'>
-								<div className='size-8 md:size-12 rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center'>
-									<Bot className='size-4 md:size-6 text-white' />
+								<div className='size-8 md:size-12 rounded-full overflow-hidden border-2 border-purple-400/50'>
+									<img 
+										src="/ai-avatar.jpg" 
+										alt="AI Music Assistant"
+										className="w-full h-full object-cover"
+									/>
 								</div>
 								{/* Always online */}
 								<div className='absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-zinc-900 bg-green-500' />

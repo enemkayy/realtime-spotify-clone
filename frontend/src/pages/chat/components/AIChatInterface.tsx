@@ -62,8 +62,8 @@ const AIChatInterface = () => {
     <>
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-zinc-800">
-        <div className="size-12 rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
-          <Bot className="size-6 text-white" />
+        <div className="size-12 rounded-full overflow-hidden border-2 border-purple-400/50">
+          <img src="/ai-avatar.jpg" alt="AI" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1">
           <h3 className="font-semibold">AI Music Assistant</h3>
@@ -90,8 +90,8 @@ const AIChatInterface = () => {
         <div className="p-4 space-y-4" ref={scrollRef}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-12 space-y-6">
-              <div className="size-20 rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
-                <Bot className="size-10 text-white" />
+              <div className="size-20 rounded-full overflow-hidden border-2 border-purple-400/50">
+                <img src="/ai-avatar.jpg" alt="AI" className="w-full h-full object-cover" />
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-lg font-medium">Start chatting with AI</h3>
@@ -147,8 +147,8 @@ const AIChatInterface = () => {
                 >
                   <Avatar className="size-8 shrink-0">
                     {msg.role === "assistant" ? (
-                      <div className="size-full rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
-                        <Bot className="size-4 text-white" />
+                      <div className="size-full rounded-full overflow-hidden">
+                        <img src="/ai-avatar.jpg" alt="AI" className="w-full h-full object-cover" />
                       </div>
                     ) : (
                       <AvatarImage src={user?.imageUrl} />
@@ -199,7 +199,7 @@ const AIChatInterface = () => {
                       </div>
                     )}
 
-                    <span className="text-xs text-zinc-400 mt-1 block">
+                    <span className="text-xs text-zinc-300 mt-1 block">
                       {formatTime(msg.createdAt)}
                     </span>
                   </div>
@@ -209,8 +209,8 @@ const AIChatInterface = () => {
               {isLoading && (
                 <div className="flex items-start gap-3">
                   <Avatar className="size-8">
-                    <div className="size-full rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
-                      <Bot className="size-4 text-white" />
+                    <div className="size-full rounded-full overflow-hidden">
+                      <img src="/ai-avatar.jpg" alt="AI" className="w-full h-full object-cover" />
                     </div>
                   </Avatar>
                   <div className="bg-zinc-800 rounded-lg p-3">

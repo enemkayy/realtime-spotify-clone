@@ -46,6 +46,7 @@ const songSchema = new mongoose.Schema(
         "R&B",
         "Country",
         "Classical",
+        "V-Pop",
         "K-Pop",
         "Other",
       ],

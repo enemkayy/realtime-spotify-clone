@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Laptop2, ListMusic, Mic2, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume1 } from "lucide-react";
+import { Laptop2, ListMusic, Mic2, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume1, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const formatTime = (seconds: number) => {
@@ -11,14 +11,15 @@ const formatTime = (seconds: number) => {
 };
 
 export const PlaybackControls = () => {
-	const { currentSong, isPlaying, togglePlay, playNext, playPrevious } = usePlayerStore();
+	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, isRepeatOne, toggleRepeatOne } = usePlayerStore();
 
 	const [volume, setVolume] = useState(75);
+	const [previousVolume, setPreviousVolume] = useState(75);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 
-	useEffect(() => {
+		useEffect(() => {
 		audioRef.current = document.querySelector("audio");
 
 		const audio = audioRef.current;
@@ -31,7 +32,15 @@ export const PlaybackControls = () => {
 		audio.addEventListener("loadedmetadata", updateDuration);
 
 		const handleEnded = () => {
-			usePlayerStore.setState({ isPlaying: false });
+			const { isRepeatOne } = usePlayerStore.getState();
+			if (isRepeatOne && audio) {
+				// Loop current song
+				audio.currentTime = 0;
+				audio.play();
+			} else {
+				// Play next song or stop
+				playNext();
+			}
 		};
 
 		audio.addEventListener("ended", handleEnded);
@@ -41,11 +50,26 @@ export const PlaybackControls = () => {
 			audio.removeEventListener("loadedmetadata", updateDuration);
 			audio.removeEventListener("ended", handleEnded);
 		};
-	}, [currentSong]);
-
-	const handleSeek = (value: number[]) => {
+	}, [currentSong, playNext, isRepeatOne]);	const handleSeek = (value: number[]) => {
 		if (audioRef.current) {
 			audioRef.current.currentTime = value[0];
+		}
+	};
+
+	const toggleMute = () => {
+		if (volume === 0) {
+			// Unmute: restore previous volume
+			setVolume(previousVolume);
+			if (audioRef.current) {
+				audioRef.current.volume = previousVolume / 100;
+			}
+		} else {
+			// Mute: save current volume and set to 0
+			setPreviousVolume(volume);
+			setVolume(0);
+			if (audioRef.current) {
+				audioRef.current.volume = 0;
+			}
 		}
 	};
 
@@ -114,7 +138,10 @@ export const PlaybackControls = () => {
 						<Button
 							size='icon'
 							variant='ghost'
-							className='hidden sm:inline-flex hover:text-white text-zinc-400'
+							className={`hidden sm:inline-flex hover:text-white ${
+								isRepeatOne ? 'text-green-500' : 'text-zinc-400'
+							}`}
+							onClick={toggleRepeatOne}
 						>
 							<Repeat className='h-4 w-4' />
 						</Button>
@@ -145,8 +172,8 @@ export const PlaybackControls = () => {
 					</Button>
 
 					<div className='flex items-center gap-2'>
-						<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
-							<Volume1 className='h-4 w-4' />
+						<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400' onClick={toggleMute}>
+							{volume === 0 ? <VolumeX className='h-4 w-4' /> : <Volume1 className='h-4 w-4' />}
 						</Button>
 
 						<Slider
