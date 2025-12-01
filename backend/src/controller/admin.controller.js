@@ -21,7 +21,7 @@ export const createSong = async (req, res, next) => {
 			return res.status(400).json({ message: "Please upload all files" });
 		}
 
-		const { title, artist, albumId, duration } = req.body;
+		const { title, artist, albumId, duration, description, tags, mood, genre, tempo, language } = req.body;
 		const audioFile = req.files.audioFile;
 		const imageFile = req.files.imageFile;
 
@@ -34,6 +34,12 @@ export const createSong = async (req, res, next) => {
 			audioUrl,
 			imageUrl,
 			duration,
+			description: description || undefined,
+			tags: tags ? JSON.parse(tags) : undefined,
+			mood: mood ? JSON.parse(mood) : undefined,
+			genre: genre || undefined,
+			tempo: tempo || undefined,
+			language: language || undefined,
 			albumId: albumId || null,
 		});
 
@@ -110,5 +116,5 @@ export const deleteAlbum = async (req, res, next) => {
 };
 
 export const checkAdmin = async (req, res, next) => {
-	res.status(200).json({ admin: true });
+	res.status(200).json({ isAdmin: true });
 };

@@ -6,7 +6,7 @@ const AudioPlayer = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevSongRef = useRef<string | null>(null);
 
-  const { currentSong, isPlaying, playNext, forcePause } = usePlayerStore();
+  const { currentSong, isPlaying, playNext, forcePause, isRepeatOne } = usePlayerStore();
 
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
@@ -37,13 +37,24 @@ const AudioPlayer = () => {
     if (!audio) return;
 
     const onEnded = () => {
-      if (isSignedIn) playNext();
-      else forcePause();
+      if (!isSignedIn) {
+        forcePause();
+        return;
+      }
+
+      if (isRepeatOne) {
+        // Loop current song
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else {
+        // Play next song
+        playNext();
+      }
     };
 
     audio.addEventListener("ended", onEnded);
     return () => audio.removeEventListener("ended", onEnded);
-  }, [playNext, isSignedIn, forcePause]);
+  }, [playNext, isSignedIn, forcePause, isRepeatOne]);
 
   // handle song ends
   useEffect(() => {

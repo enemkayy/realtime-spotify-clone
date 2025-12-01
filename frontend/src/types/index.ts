@@ -2,6 +2,12 @@ export interface Song {
 	_id: string;
 	title: string;
 	artist: string;
+	description?: string;
+	tags?: string[];
+	mood?: string[];
+	genre?: string;
+	tempo?: "slow" | "medium" | "fast";
+	language?: string;
 	albumId: string | null;
 	imageUrl: string;
 	audioUrl: string;
@@ -40,4 +46,26 @@ export interface User {
 	clerkId: string;
 	fullName: string;
 	imageUrl: string;
+	closeFriends?: string[] | { clerkId: string }[];
+}
+
+export interface AIMessage {
+	_id?: string;
+	role: "user" | "assistant";
+	content: string;
+	songs?: Song[];
+	metadata?: {
+		reason?: string;
+		mood?: string;
+		genre?: string;
+		matchScore?: number;
+	};
+	createdAt: Date;
+}
+
+export interface AISimilarResponse {
+	targetSong: Song;
+	reason: string;
+	matchCriteria: string[];
+	songs: Song[];
 }

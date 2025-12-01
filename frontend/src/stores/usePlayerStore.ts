@@ -7,6 +7,7 @@ interface PlayerStore {
 	isPlaying: boolean;
 	queue: Song[];
 	currentIndex: number;
+	isRepeatOne: boolean;
 
 	initializeQueue: (songs: Song[]) => void;
 	playAlbum: (songs: Song[], startIndex?: number) => void;
@@ -15,6 +16,7 @@ interface PlayerStore {
 	playNext: () => void;
 	playPrevious: () => void;
 	forcePause: () => void;
+	toggleRepeatOne: () => void;
 }
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -22,6 +24,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 	isPlaying: false,
 	queue: [],
 	currentIndex: -1,
+	isRepeatOne: false,
 
 	initializeQueue: (songs: Song[]) => {
 		set({
@@ -157,4 +160,5 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		}
 	},
 	forcePause: () => set({ isPlaying: false }),
+	toggleRepeatOne: () => set({ isRepeatOne: !get().isRepeatOne }),
 }));

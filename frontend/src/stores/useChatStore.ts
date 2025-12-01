@@ -13,6 +13,7 @@ interface ChatStore {
 	userActivities: Map<string, string>;
 	messages: Message[];
 	selectedUser: User | null;
+	isAIChat: boolean; // NEW: track if AI chat is active
 
 	fetchUsers: () => Promise<void>;
 	initSocket: (userId: string) => void;
@@ -20,6 +21,7 @@ interface ChatStore {
 	sendMessage: (receiverId: string, senderId: string, content: string) => void;
 	fetchMessages: (userId: string) => Promise<void>;
 	setSelectedUser: (user: User | null) => void;
+	setAIChat: (isAI: boolean) => void; // NEW: toggle AI chat
 }
 
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "/";
@@ -39,8 +41,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	userActivities: new Map(),
 	messages: [],
 	selectedUser: null,
+	isAIChat: false, // NEW
 
 	setSelectedUser: (user) => set({ selectedUser: user }),
+	setAIChat: (isAI) => set({ isAIChat: isAI }), // NEW
 
 	fetchUsers: async () => {
 		set({ isLoading: true, error: null });
@@ -101,6 +105,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 					newActivities.set(userId, activity);
 					return { userActivities: newActivities };
 				});
+			});
+
+			socket.on("message_error", (error: string) => {
+				console.error("Message error:", error);
+				// You can show a toast here if needed
+				// toast.error(error);
 			});
 
 			set({ isConnected: true });
