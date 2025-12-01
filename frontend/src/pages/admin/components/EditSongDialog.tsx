@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { axiosInstance } from "@/lib/axios";
 import { useMusicStore } from "@/stores/useMusicStore";
-import { Upload, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Song } from "@/types";

@@ -19,7 +19,6 @@ const FriendsActivity = () => {
     addCloseFriend,
     removeCloseFriend,
     removeFriend,
-    isLoading,
   } = useFriendStore();
   const { user } = useUser();
   const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);

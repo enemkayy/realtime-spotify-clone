@@ -14,7 +14,7 @@ interface AIChatStore {
     clearChat: () => Promise<void>;
 }
 
-export const useAIChatStore = create<AIChatStore>((set, get) => ({
+export const useAIChatStore = create<AIChatStore>((set) => ({
     messages: [],
     isLoading: false,
     error: null,

@@ -1,6 +1,6 @@
 import { useAIChatStore } from "@/stores/useAIChatStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Loader, Send, Sparkles, Trash2 } from "lucide-react";
+import { Loader, Send, Sparkles, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";

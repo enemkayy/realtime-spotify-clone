@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "@/stores/useChatStore";
 import { useFriendStore } from "@/stores/useFriendStore";
-import { Bot } from "lucide-react";
 
 const UsersList = () => {
 	const { selectedUser, setSelectedUser, onlineUsers, isAIChat, setAIChat } = useChatStore();
