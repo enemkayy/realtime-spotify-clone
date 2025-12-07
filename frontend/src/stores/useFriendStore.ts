@@ -40,6 +40,9 @@ interface FriendStore {
 	searchUsers: (query: string) => Promise<void>;
 	clearSearchResults: () => void;
 
+	// Socket updates
+	updateSearchResultStatus: (userId: string, newStatus: UserWithRelationship["relationshipStatus"]) => void;
+
 	// Block operations
 	blockUser: (userId: string) => Promise<void>;
 	unblockUser: (userId: string) => Promise<void>;
@@ -217,6 +220,14 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
 
 	clearSearchResults: () => {
 		set({ searchResults: [] });
+	},
+
+	updateSearchResultStatus: (userId: string, newStatus: UserWithRelationship["relationshipStatus"]) => {
+		set((state) => ({
+			searchResults: state.searchResults.map((user) =>
+				user.clerkId === userId ? { ...user, relationshipStatus: newStatus } : user
+			),
+		}));
 	},
 
 	blockUser: async (userId: string) => {

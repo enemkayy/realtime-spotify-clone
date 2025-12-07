@@ -185,7 +185,7 @@ const FriendsActivity = () => {
                       size="icon"
                       className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => handleRemoveFriend(friend._id, e)}
-                      title="Unfriend (remove completely)"
+                      title="Unfriend"
                     >
                       <X className="size-4 text-zinc-400 hover:text-red-400" />
                     </Button>

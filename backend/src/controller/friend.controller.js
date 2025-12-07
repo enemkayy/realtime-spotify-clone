@@ -104,7 +104,7 @@ export const acceptFriendRequest = async (req, res, next) => {
     // Find the request by _id (NOT by from field)
     const requestIndex = currentUser.friendRequests.findIndex(
       (req) => req._id.toString() === requestId && req.status === "pending"
-      //       ^^^ Changed from req.from to req._id
+      
     );
 
     if (requestIndex === -1) {
@@ -167,25 +167,36 @@ export const rejectFriendRequest = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Find and update request
+    // Find request by _id (not sender ID)
     const requestIndex = currentUser.friendRequests.findIndex(
-      (req) => req.from.toString() === requestId && req.status === "pending"
+      (req) => req._id.toString() === requestId && req.status === "pending"
     );
 
     if (requestIndex === -1) {
       return res.status(404).json({ message: "Friend request not found" });
     }
 
+    const senderId = currentUser.friendRequests[requestIndex].from;
+
     // Update status to rejected
     currentUser.friendRequests[requestIndex].status = "rejected";
 
     // Remove from sender's sent requests
-    const sender = await User.findById(requestId);
+    const sender = await User.findById(senderId);
     if (sender) {
       sender.sentRequests = sender.sentRequests.filter(
         (id) => id.toString() !== currentUser._id.toString()
       );
       await sender.save();
+      
+      // Notify sender that request was rejected via socket
+      const io = req.app.get("io");
+      if (io && sender.clerkId) {
+        io.to(sender.clerkId).emit("friend_request_rejected", {
+          rejectedBy: currentUserClerkId,
+          requestId: requestId,
+        });
+      }
     }
 
     await currentUser.save();

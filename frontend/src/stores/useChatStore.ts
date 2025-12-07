@@ -99,21 +99,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				}));
 			});
 
-			socket.on("activity_updated", ({ userId, activity }) => {
-				set((state) => {
-					const newActivities = new Map(state.userActivities);
-					newActivities.set(userId, activity);
-					return { userActivities: newActivities };
-				});
+		socket.on("activity_updated", ({ userId, activity }) => {
+			set((state) => {
+				const newActivities = new Map(state.userActivities);
+				newActivities.set(userId, activity);
+				return { userActivities: newActivities };
 			});
+		});
 
-			socket.on("message_error", (error: string) => {
-				console.error("Message error:", error);
-				// You can show a toast here if needed
-				// toast.error(error);
+		socket.on("friend_request_rejected", ({ rejectedBy }) => {
+			// Update search results to show "stranger" status
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
 			});
+		});
 
-			set({ isConnected: true });
+		socket.on("message_error", (error: string) => {
+			console.error("Message error:", error);
+			// You can show a toast here if needed
+			// toast.error(error);
+		});			set({ isConnected: true });
 		}
 	},
 
