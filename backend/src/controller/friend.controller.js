@@ -82,6 +82,24 @@ export const sendFriendRequest = async (req, res, next) => {
     await targetUser.save();
     await sender.save();
 
+    // Observer Pattern: Notify target user via Subject
+    const io = req.app.get("io");
+    if (io && io.activitySubject) {
+      const request = targetUser.friendRequests[targetUser.friendRequests.length - 1];
+      io.activitySubject.friendRequestReceived(targetUser.clerkId, {
+        _id: request._id,
+        from: sender._id,
+        status: "pending",
+        senderData: {
+          _id: sender._id,
+          fullName: sender.fullName,
+          imageUrl: sender.imageUrl,
+          clerkId: sender.clerkId,
+        },
+      });
+      console.log(`📨 [Observer] Friend request notification sent to ${targetUser.clerkId}`);
+    }
+
     res.status(200).json({ message: "Friend request sent successfully" });
   } catch (error) {
     console.error("Error in sendFriendRequest:", error);
@@ -141,6 +159,20 @@ export const acceptFriendRequest = async (req, res, next) => {
     await currentUser.save();
     await sender.save();
 
+    // Observer Pattern: Notify both users of acceptance
+    const io = req.app.get("io");
+    if (io && io.activitySubject) {
+      io.activitySubject.friendRequestAccepted(
+        currentUser.clerkId,
+        sender.clerkId,
+        {
+          fullName: currentUser.fullName,
+          imageUrl: currentUser.imageUrl,
+        }
+      );
+      console.log(`✅ [Observer] Friend request acceptance notification sent`);
+    }
+
     res.status(200).json({
       message: "Friend request accepted",
       friend: {
@@ -189,13 +221,11 @@ export const rejectFriendRequest = async (req, res, next) => {
       );
       await sender.save();
       
-      // Notify sender that request was rejected via socket
+      // Observer Pattern: Notify sender that request was rejected
       const io = req.app.get("io");
-      if (io && sender.clerkId) {
-        io.to(sender.clerkId).emit("friend_request_rejected", {
-          rejectedBy: currentUserClerkId,
-          requestId: requestId,
-        });
+      if (io && io.activitySubject) {
+        io.activitySubject.friendRequestRejected(sender.clerkId, currentUser.clerkId);
+        console.log(`❌ [Observer] Friend request rejection notification sent to ${sender.clerkId}`);
       }
     }
 

@@ -1,6 +1,16 @@
 import { create } from "zustand";
 import { Song } from "@/types";
 import { useChatStore } from "./useChatStore";
+import { axiosInstance } from "@/lib/axios";
+
+// Helper function to increment play count
+const incrementPlayCount = async (songId: string) => {
+	try {
+		await axiosInstance.post(`/songs/${songId}/play`);
+	} catch (error) {
+		console.error("Failed to increment play count:", error);
+	}
+};
 
 interface PlayerStore {
 	currentSong: Song | null;
@@ -39,6 +49,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
 		const song = songs[startIndex];
 
+		// Increment play count
+		incrementPlayCount(song._id);
+
 		const socket = useChatStore.getState().socket;
 		if (socket.auth) {
 			socket.emit("update_activity", {
@@ -56,6 +69,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
 	setCurrentSong: (song: Song | null) => {
 		if (!song) return;
+
+		// Increment play count
+		incrementPlayCount(song._id);
 
 		const socket = useChatStore.getState().socket;
 		if (socket.auth) {

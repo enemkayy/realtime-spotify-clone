@@ -70,20 +70,10 @@ export const getFeaturedSongs = async (req, res, next) => {
 
 export const getMadeForYouSongs = async (req, res, next) => {
   try {
-    const songs = await Song.aggregate([
-      {
-        $sample: { size: 4 },
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          artist: 1,
-          imageUrl: 1,
-          audioUrl: 1,
-        },
-      },
-    ]);
+    // Return all songs for "Made For You" section
+    const songs = await Song.find()
+      .select('_id title artist imageUrl audioUrl')
+      .sort({ createdAt: -1 }); // Latest songs first
 
     res.json(songs);
   } catch (error) {
@@ -93,20 +83,11 @@ export const getMadeForYouSongs = async (req, res, next) => {
 
 export const getTrendingSongs = async (req, res, next) => {
   try {
-    const songs = await Song.aggregate([
-      {
-        $sample: { size: 4 },
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          artist: 1,
-          imageUrl: 1,
-          audioUrl: 1,
-        },
-      },
-    ]);
+    // Return all songs for "Trending" section, sorted by play count (most played first)
+    const songs = await Song.find()
+      .select('_id title artist imageUrl audioUrl playCount')
+      .sort({ playCount: -1, createdAt: -1 }) // Sort by playCount DESC, then by createdAt DESC
+      .limit(50); // Limit to 50 trending songs
 
     res.json(songs);
   } catch (error) {
@@ -216,6 +197,27 @@ export const updateSong = async (req, res, next) => {
 		res.json(song);
 	} catch (error) {
 		console.log("Error in updateSong:", error);
+		next(error);
+	}
+};
+
+// Increment play count when a song is played
+export const incrementPlayCount = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+
+		const song = await Song.findByIdAndUpdate(
+			id,
+			{ $inc: { playCount: 1 } },
+			{ new: true }
+		);
+
+		if (!song) {
+			return res.status(404).json({ message: "Song not found" });
+		}
+
+		res.json({ message: "Play count incremented", playCount: song.playCount });
+	} catch (error) {
 		next(error);
 	}
 };
