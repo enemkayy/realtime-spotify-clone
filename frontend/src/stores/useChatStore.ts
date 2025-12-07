@@ -91,16 +91,65 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				});
 			});
 			
-			socket.on("activity_updated", ({ userId: activityUserId, activity }: { userId: string; activity: string }) => {
-				console.log("🎵 [Frontend] Activity updated:", activityUserId, activity);
-				set((state) => {
-					const newActivities = new Map(state.userActivities);
-					newActivities.set(activityUserId, activity);
-					return { userActivities: newActivities };
-				});
+		socket.on("activity_updated", ({ userId: activityUserId, activity }: { userId: string; activity: string }) => {
+			console.log("🎵 [Frontend] Activity updated:", activityUserId, activity);
+			set((state) => {
+				const newActivities = new Map(state.userActivities);
+				newActivities.set(activityUserId, activity);
+				return { userActivities: newActivities };
+			});
+		});
+
+		// Friend request events
+		socket.on("new_friend_request", (request: any) => {
+			console.log("📨 [Frontend] New friend request received:", request);
+			
+			// Dynamically import to avoid circular dependency
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().fetchPendingRequests();
 			});
 			
-		// Connect AFTER listeners are setup
+			// Show toast notification
+			import("react-hot-toast").then(({ default: toast }) => {
+				toast.success(`${request.senderData?.fullName || "Someone"} sent you a friend request!`, {
+					duration: 4000,
+					icon: "👋",
+				});
+			});
+		});
+
+		socket.on("friend_request_accepted", (data: any) => {
+			console.log("✅ [Frontend] Friend request accepted - RAW DATA:", JSON.stringify(data, null, 2));
+			console.log("  - accepterName:", data.accepterName);
+			console.log("  - accepterImageUrl:", data.accepterImageUrl);
+			console.log("  - accepterId:", data.accepterId);
+			console.log("  - friendId:", data.friendId);
+			
+			console.log("🔔 [Frontend] Dispatching custom event: friend-request-accepted");
+			
+			// Trigger dialog through custom event
+			const customEvent = new CustomEvent("friend-request-accepted", { 
+				detail: data 
+			});
+			window.dispatchEvent(customEvent);
+			
+			console.log("✅ [Frontend] Custom event dispatched successfully");
+			
+			// Refresh friends list
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().fetchPendingRequests();
+			});
+		});
+
+		socket.on("friend_request_rejected", ({ rejectedBy }) => {
+			console.log("❌ [Frontend] Friend request rejected by:", rejectedBy);
+			
+			// Update search results to show "stranger" status
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
+			});
+		});
+				// Connect AFTER listeners are setup
 		socket.connect();
 		
 		// Emit user_connected AFTER socket is connected
@@ -131,18 +180,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 			}));
 		});
 
-	socket.on("friend_request_rejected", ({ rejectedBy }) => {
-		// Update search results to show "stranger" status
-		import("./useFriendStore").then(({ useFriendStore }) => {
-			useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
+		socket.on("message_error", (error: string) => {
+			console.error("Message error:", error);
+			// You can show a toast here if needed
+			// toast.error(error);
 		});
-	});
-
-	socket.on("message_error", (error: string) => {
-		console.error("Message error:", error);
-		// You can show a toast here if needed
-		// toast.error(error);
-	});
 	}
 },	disconnectSocket: () => {
 		if (get().isConnected) {

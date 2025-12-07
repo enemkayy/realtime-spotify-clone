@@ -54,6 +54,10 @@ export class SocketObserver {
       this.socket.emit("user_connected", data.userId);
       // Also send updated full list
       this.socket.emit("users_online", data.onlineUsers);
+      // Send activities too
+      if (data.activities) {
+        this.socket.emit("activities", data.activities);
+      }
       console.log(`📢 Observer ${this.userId}: Notified about ${data.userId} coming online`);
     }
   }
@@ -89,15 +93,26 @@ export class SocketObserver {
 
   // Handle: Friend request accepted
   handleFriendRequestAccepted(data) {
-    // Notify both users involved
-    if (data.userId === this.userId || data.friendId === this.userId) {
+    console.log(`🔍 [SocketObserver] handleFriendRequestAccepted called`);
+    console.log(`   - This observer userId: ${this.userId}`);
+    console.log(`   - Event data.userId (accepter): ${data.userId}`);
+    console.log(`   - Event data.friendId (sender): ${data.friendId}`);
+    console.log(`   - Event data.accepterData:`, data.accepterData);
+    
+    // Only notify the sender (friendId) about the acceptance
+    // userId = person who accepted (receiver)
+    // friendId = person who sent the request (sender)
+    if (data.friendId === this.userId) {
+      console.log(`✅ MATCH! Sending notification to sender ${this.userId}`);
       this.socket.emit("friend_request_accepted", {
         accepterId: data.userId,
         friendId: data.friendId,
         accepterName: data.accepterData?.fullName,
-        accepterImage: data.accepterData?.imageUrl,
+        accepterImageUrl: data.accepterData?.imageUrl,
       });
-      console.log(`✅ Sent acceptance notification to ${this.userId}`);
+      console.log(`✅ Sent acceptance notification to sender ${this.userId} (accepter: ${data.accepterData?.fullName})`);
+    } else {
+      console.log(`⏭️ SKIP: This observer (${this.userId}) is not the sender (${data.friendId})`);
     }
   }
 
