@@ -61,68 +61,90 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	initSocket: (userId) => {
 		if (!get().isConnected) {
 			socket.auth = { userId };
-			socket.connect();
-
-			socket.emit("user_connected", userId);
-
+			
+			console.log(`🔌 [Frontend] Initializing socket for user: ${userId}`);
+			
+			// Remove any existing listeners to prevent duplicates
+			socket.removeAllListeners();
+			
+			// Setup event listeners BEFORE connecting
 			socket.on("users_online", (users: string[]) => {
+				console.log("🟢 [Frontend] Received users_online:", users);
 				set({ onlineUsers: new Set(users) });
 			});
-
-			socket.on("activities", (activities: [string, string][]) => {
-				set({ userActivities: new Map(activities) });
-			});
-
-			socket.on("user_connected", (userId: string) => {
-				set((state) => ({
-					onlineUsers: new Set([...state.onlineUsers, userId]),
-				}));
-			});
-
-			socket.on("user_disconnected", (userId: string) => {
+			
+			socket.on("user_connected", (connectedUserId: string) => {
+				console.log("🟢 [Frontend] User connected:", connectedUserId);
 				set((state) => {
 					const newOnlineUsers = new Set(state.onlineUsers);
-					newOnlineUsers.delete(userId);
+					newOnlineUsers.add(connectedUserId);
 					return { onlineUsers: newOnlineUsers };
 				});
 			});
-
-			socket.on("receive_message", (message: Message) => {
-				set((state) => ({
-					messages: [...state.messages, message],
-				}));
+			
+			socket.on("user_disconnected", (disconnectedUserId: string) => {
+				console.log("⚫ [Frontend] User disconnected:", disconnectedUserId);
+				set((state) => {
+					const newOnlineUsers = new Set(state.onlineUsers);
+					newOnlineUsers.delete(disconnectedUserId);
+					return { onlineUsers: newOnlineUsers };
+				});
 			});
-
-			socket.on("message_sent", (message: Message) => {
-				set((state) => ({
-					messages: [...state.messages, message],
-				}));
+			
+			socket.on("activity_updated", ({ userId: activityUserId, activity }: { userId: string; activity: string }) => {
+				console.log("🎵 [Frontend] Activity updated:", activityUserId, activity);
+				set((state) => {
+					const newActivities = new Map(state.userActivities);
+					newActivities.set(activityUserId, activity);
+					return { userActivities: newActivities };
+				});
 			});
-
-		socket.on("activity_updated", ({ userId, activity }) => {
-			set((state) => {
-				const newActivities = new Map(state.userActivities);
-				newActivities.set(userId, activity);
-				return { userActivities: newActivities };
-			});
+			
+		// Connect AFTER listeners are setup
+		socket.connect();
+		
+		// Emit user_connected AFTER socket is connected
+		socket.on("connect", () => {
+			console.log("✅ [Frontend] Socket connected, emitting user_connected");
+			socket.emit("user_connected", userId);
+			set({ isConnected: true });
+		});
+		
+		socket.on("connect_error", (error) => {
+			console.error("❌ [Frontend] Socket connection error:", error);
 		});
 
-		socket.on("friend_request_rejected", ({ rejectedBy }) => {
-			// Update search results to show "stranger" status
-			import("./useFriendStore").then(({ useFriendStore }) => {
-				useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
-			});
+		socket.on("activities", (activities: Record<string, string>) => {
+			console.log("🎵 [Frontend] Received activities:", Object.keys(activities).length);
+			set({ userActivities: new Map(Object.entries(activities)) });
 		});
 
-		socket.on("message_error", (error: string) => {
-			console.error("Message error:", error);
-			// You can show a toast here if needed
-			// toast.error(error);
-		});			set({ isConnected: true });
-		}
-	},
+		socket.on("receive_message", (message: Message) => {
+			set((state) => ({
+				messages: [...state.messages, message],
+			}));
+		});
 
-	disconnectSocket: () => {
+		socket.on("message_sent", (message: Message) => {
+			set((state) => ({
+				messages: [...state.messages, message],
+			}));
+		});
+
+	socket.on("friend_request_rejected", ({ rejectedBy }) => {
+		// Update search results to show "stranger" status
+		import("./useFriendStore").then(({ useFriendStore }) => {
+			useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
+		});
+	});
+
+	socket.on("message_error", (error: string) => {
+		console.error("Message error:", error);
+		// You can show a toast here if needed
+		// toast.error(error);
+	});
+	}
+},	disconnectSocket: () => {
 		if (get().isConnected) {
 			socket.disconnect();
 			set({ isConnected: false });

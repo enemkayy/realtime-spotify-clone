@@ -27,7 +27,10 @@ const app = express();
 const PORT = process.env.PORT;
 
 const httpServer = createServer(app);
-initializeSocket(httpServer);
+const io = initializeSocket(httpServer);
+
+// Store io instance in app for controllers
+app.set("io", io);
 
 app.use(
 	cors({

@@ -68,6 +68,10 @@ const songSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    playCount: {
+      type: Number,
+      default: 0,
+    },
     albumId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Album",
