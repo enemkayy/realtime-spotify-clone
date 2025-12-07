@@ -1,88 +1,52 @@
-import { useEffect } from "react";
-import { useChatStore } from "@/stores/useChatStore";
-import { useFriendStore } from "@/stores/useFriendStore";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { FriendRequestAcceptedDialog } from "@/components/FriendRequestAcceptedDialog";
 
 /**
  * Observer Pattern: Concrete Observer for Friend Activities
- * Observes socket events for friend requests and user activities
+ * Listens to custom events triggered by socket listeners in useChatStore
  * Updates UI state and shows notifications
  */
 export const FriendActivityObserver = () => {
-  const { socket } = useChatStore();
-  const { 
-    fetchPendingRequests, 
-    incrementPendingRequestsCount, 
-    updateSearchResultStatus 
-  } = useFriendStore();
+  // State for accepted dialog
+  const [acceptedDialog, setAcceptedDialog] = useState<{
+    isOpen: boolean;
+    friendName: string;
+    friendImageUrl?: string;
+  }>({
+    isOpen: false,
+    friendName: "",
+    friendImageUrl: undefined,
+  });
 
   useEffect(() => {
-    if (!socket) return;
-
-    // Observer Pattern: Listen for new friend request
-    const handleNewFriendRequest = (request: any) => {
-      console.log("📨 [Observer] New friend request received:", request);
+    // Listen for custom event from useChatStore
+    const handleFriendRequestAccepted = (event: any) => {
+      const data = event.detail;
+      console.log("✅ [Observer Component] Friend request accepted event received:", data);
       
-      // Update pending requests count
-      incrementPendingRequestsCount();
-      
-      // Refresh pending requests list
-      fetchPendingRequests();
-      
-      // Show toast notification
-      toast.success(`${request.senderData?.fullName || "Someone"} sent you a friend request!`, {
-        duration: 4000,
-        icon: "👋",
+      // Show dialog
+      setAcceptedDialog({
+        isOpen: true,
+        friendName: data.accepterName || "Someone",
+        friendImageUrl: data.accepterImageUrl,
       });
     };
 
-    // Observer Pattern: Listen for friend request acceptance
-    const handleFriendRequestAccepted = (data: any) => {
-      console.log("✅ [Observer] Friend request accepted:", data);
-      
-      // Show toast notification
-      toast.success(`${data.accepterName || "Someone"} accepted your friend request!`, {
-        duration: 4000,
-        icon: "🎉",
-      });
-      
-      // Refresh friends list
-      fetchPendingRequests();
-    };
+    // Attach event listener
+    window.addEventListener("friend-request-accepted", handleFriendRequestAccepted);
 
-    // Observer Pattern: Listen for friend request rejection
-    const handleFriendRequestRejected = (data: any) => {
-      console.log("❌ [Observer] Friend request rejected:", data);
-      
-      // Update search results if viewing
-      updateSearchResultStatus(data.rejectedBy, "none");
-      
-      // Show toast notification (optional, might be too harsh)
-      // toast.error("Friend request was declined", { duration: 3000 });
-    };
-
-    // Observer Pattern: Listen for activity updates
-    const handleActivityUpdated = (data: { userId: string; activity: string }) => {
-      console.log("🎵 [Observer] Activity updated:", data);
-      
-      // Could update UI to show what friends are listening to
-      // For now, just log it
-    };
-
-    // Attach observers
-    socket.on("new_friend_request", handleNewFriendRequest);
-    socket.on("friend_request_accepted", handleFriendRequestAccepted);
-    socket.on("friend_request_rejected", handleFriendRequestRejected);
-    socket.on("activity_updated", handleActivityUpdated);
-
-    // Detach observers on cleanup
+    // Cleanup
     return () => {
-      socket.off("new_friend_request", handleNewFriendRequest);
-      socket.off("friend_request_accepted", handleFriendRequestAccepted);
-      socket.off("friend_request_rejected", handleFriendRequestRejected);
-      socket.off("activity_updated", handleActivityUpdated);
+      window.removeEventListener("friend-request-accepted", handleFriendRequestAccepted);
     };
-  }, [socket, fetchPendingRequests, incrementPendingRequestsCount, updateSearchResultStatus]);
+  }, []);
 
-  return null; // Observer component doesn't render anything
+  return (
+    <FriendRequestAcceptedDialog
+      isOpen={acceptedDialog.isOpen}
+      onClose={() => setAcceptedDialog({ isOpen: false, friendName: "", friendImageUrl: undefined })}
+      friendName={acceptedDialog.friendName}
+      friendImageUrl={acceptedDialog.friendImageUrl}
+    />
+  );
 };

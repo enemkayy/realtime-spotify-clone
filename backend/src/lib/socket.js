@@ -99,24 +99,23 @@ export const initializeSocket = (server) => {
 		});
 
 		socket.on("disconnect", () => {
-			let disconnectedUserId;
-			for (const [userId, socketId] of userSockets.entries()) {
-				// find disconnected user
-				if (socketId === socket.id) {
-					disconnectedUserId = userId;
-					userSockets.delete(userId);
-					break;
-				}
-			}
+			const disconnectedUserId = observer.userId;
 			
 			if (disconnectedUserId) {
-				console.log(`👋 User ${disconnectedUserId} disconnected`);
+				console.log(`👋 User ${disconnectedUserId} disconnected (socket: ${socket.id})`);
+				
+				// Remove from userSockets map
+				userSockets.delete(disconnectedUserId);
 				
 				// Observer Pattern: Notify all observers BEFORE detaching
 				activitySubject.userWentOffline(disconnectedUserId);
 				activitySubject.detach(observer);
 				
 				console.log(`❌ Observer detached for ${disconnectedUserId}`);
+			} else {
+				// Socket disconnected before user_connected was emitted
+				console.log(`🔌 Anonymous socket disconnected: ${socket.id}`);
+				activitySubject.detach(observer);
 			}
 		});
 	});
