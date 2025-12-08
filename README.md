@@ -5,7 +5,9 @@
 </p>
 
 <p align="center">
-  [![Live Demo](https://img.shields.io/badge/Live_Demo-green?style=for-the-badge&logo=render)](https://realtime-spotify-clone-test.onrender.com/)
+  <a href="https://realtime-spotify-clone-test.onrender.com/">
+    <img src="https://img.shields.io/badge/Live_Demo-green?style=for-the-badge&logo=render" alt="Live Demo" />
+  </a>
 </p>
 
 <p align="center">
@@ -420,30 +422,35 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This project was developed by a dedicated team of students:
 
 <table align="center">
-  <tr>
-    <td align="center">
-      <a href="https://github.com/enemkayy">
-        <img src="https://github.com/enemkayy.png" width="100px;" alt="Nguyễn Minh Khôi"/><br />
-        <sub><b>Nguyễn Minh Khôi (Leader)</b></sub>
-      </a><br />
-      <sub>ITCSIU22210</sub>
-    </td>
-    <td align="center">
-      <img src="https://via.placeholder.com/100" width="100px;" alt="Vương Quán Siêu"/><br />
-      <sub><b>Vương Quán Siêu</b></sub><br />
-      <sub>ITCSIU22270</sub>
-    </td>
-    <td align="center">
-      <img src="https://via.placeholder.com/100" width="100px;" alt="Đỗ Tuấn Huy"/><br />
-      <sub><b>Đỗ Tuấn Huy</b></sub><br />
-      <sub>ITITDK23004</sub>
-    </td>
-    <td align="center">
-      <img src="https://via.placeholder.com/100" width="100px;" alt="Đoàn Xuân Cao"/><br />
-      <sub><b>Đoàn Xuân Cao</b></sub><br />
-      <sub>ITCSIU23061</sub>
-    </td>
-  </tr>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Student ID</th>
+      <th>GitHub</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Nguyễn Minh Khôi</b> 👑 <i>(Leader)</i></td>
+      <td>ITCSIU22210</td>
+      <td><a href="https://github.com/enemkayy">@enemkayy</a></td>
+    </tr>
+    <tr>
+      <td><b>Vương Quán Siêu</b></td>
+      <td>ITCSIU22270</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><b>Đỗ Tuấn Huy</b></td>
+      <td>ITITDK23004</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><b>Đoàn Xuân Cao</b></td>
+      <td>ITCSIU23061</td>
+      <td>-</td>
+    </tr>
+  </tbody>
 </table>
 
 ---
