@@ -2,7 +2,6 @@ import { Song } from "@/types";
 import SectionGridSkeleton from "./SectionGridSkeleton";
 import { Button } from "@/components/ui/button";
 import PlayButton from "./PlayButton";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type SectionGridProps = {
@@ -14,13 +13,11 @@ type SectionGridProps = {
 const INITIAL_DISPLAY_COUNT = 4; // Show 4 songs initially
 
 const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
-	const [showAll, setShowAll] = useState(false);
 	const navigate = useNavigate();
 
 	if (isLoading) return <SectionGridSkeleton />;
 
-	const displayedSongs = showAll ? songs : songs.slice(0, INITIAL_DISPLAY_COUNT);
-	const hasMore = songs.length > INITIAL_DISPLAY_COUNT;
+	const displayedSongs = songs.slice(0, INITIAL_DISPLAY_COUNT);
 
 	const handleShowAll = () => {
 		if (title === "Made For You") {
