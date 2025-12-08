@@ -419,7 +419,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Contributors
 
-This project was developed by a dedicated team of students:
+This project was developed by a dedicated team of students from Ho Chi Minh City International University (HCMIU):
 
 <table align="center">
   <thead>
