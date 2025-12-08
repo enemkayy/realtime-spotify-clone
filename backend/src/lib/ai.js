@@ -326,7 +326,7 @@ Return ONLY this JSON structure, no extra text:
 };
 
 /**
- * Tìm bài hát tương tự
+ * Find similar songs to a target song using AI
  */
 export const analyzeSongSimilarity = async (targetSong, allSongs) => {
   try {

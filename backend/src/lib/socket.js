@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import { Message } from "../models/message.model.js";
 import { User } from "../models/user.model.js";
+import { UserActivitySubject } from "./observers/UserActivitySubject.js";
+import { SocketObserver } from "./observers/SocketObserver.js";
 
 export const initializeSocket = (server) => {
 	const io = new Server(server, {
@@ -10,26 +12,42 @@ export const initializeSocket = (server) => {
 		},
 	});
 
-	const userSockets = new Map(); // { userId: socketId}
-	const userActivities = new Map(); // {userId: activity}
+	// Observer Pattern: Create Subject
+	const activitySubject = new UserActivitySubject();
+	
+	// Expose subject for controllers to use
+	io.activitySubject = activitySubject;
+
+	const userSockets = new Map(); // { userId: socketId} - kept for message routing
 
 	io.on("connection", (socket) => {
+		console.log(`🔌 Socket connected: ${socket.id}`);
+
+		// Observer Pattern: Create observer for this socket
+		const observer = new SocketObserver(socket, io);
+		activitySubject.attach(observer);
+
 		socket.on("user_connected", (userId) => {
 			userSockets.set(userId, socket.id);
-			userActivities.set(userId, "Idle");
+			observer.setUserId(userId);
+			
+			console.log(`👤 User authenticated: ${userId}`);
 
-			// broadcast to all connected sockets that this user just logged in
-			io.emit("user_connected", userId);
+			// Send initial state to newly connected user BEFORE notifying others
+			const state = activitySubject.getState();
+			socket.emit("users_online", state.onlineUsers);
+			socket.emit("activities", state.activities);
+			console.log(`📤 Sent initial state to ${userId}: ${state.onlineUsers.length} users online`);
 
-			socket.emit("users_online", Array.from(userSockets.keys()));
-
-			io.emit("activities", Array.from(userActivities.entries()));
+			// Observer Pattern: Notify all observers AFTER setup
+			activitySubject.userWentOnline(userId, socket.id);
 		});
 
 		socket.on("update_activity", ({ userId, activity }) => {
-			console.log("activity updated", userId, activity);
-			userActivities.set(userId, activity);
-			io.emit("activity_updated", { userId, activity });
+			console.log("🎵 Activity updated:", userId, activity);
+			
+			// Observer Pattern: Notify all observers
+			activitySubject.activityChanged(userId, activity);
 		});
 
 		socket.on("send_message", async (data) => {
@@ -81,19 +99,26 @@ export const initializeSocket = (server) => {
 		});
 
 		socket.on("disconnect", () => {
-			let disconnectedUserId;
-			for (const [userId, socketId] of userSockets.entries()) {
-				// find disconnected user
-				if (socketId === socket.id) {
-					disconnectedUserId = userId;
-					userSockets.delete(userId);
-					userActivities.delete(userId);
-					break;
-				}
-			}
+			const disconnectedUserId = observer.userId;
+			
 			if (disconnectedUserId) {
-				io.emit("user_disconnected", disconnectedUserId);
+				console.log(`👋 User ${disconnectedUserId} disconnected (socket: ${socket.id})`);
+				
+				// Remove from userSockets map
+				userSockets.delete(disconnectedUserId);
+				
+				// Observer Pattern: Notify all observers BEFORE detaching
+				activitySubject.userWentOffline(disconnectedUserId);
+				activitySubject.detach(observer);
+				
+				console.log(`❌ Observer detached for ${disconnectedUserId}`);
+			} else {
+				// Socket disconnected before user_connected was emitted
+				console.log(`🔌 Anonymous socket disconnected: ${socket.id}`);
+				activitySubject.detach(observer);
 			}
 		});
 	});
+
+	return io;
 };

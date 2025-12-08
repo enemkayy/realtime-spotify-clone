@@ -61,63 +61,132 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	initSocket: (userId) => {
 		if (!get().isConnected) {
 			socket.auth = { userId };
-			socket.connect();
-
-			socket.emit("user_connected", userId);
-
+			
+			console.log(`🔌 [Frontend] Initializing socket for user: ${userId}`);
+			
+			// Remove any existing listeners to prevent duplicates
+			socket.removeAllListeners();
+			
+			// Setup event listeners BEFORE connecting
 			socket.on("users_online", (users: string[]) => {
+				console.log("🟢 [Frontend] Received users_online:", users);
 				set({ onlineUsers: new Set(users) });
 			});
-
-			socket.on("activities", (activities: [string, string][]) => {
-				set({ userActivities: new Map(activities) });
-			});
-
-			socket.on("user_connected", (userId: string) => {
-				set((state) => ({
-					onlineUsers: new Set([...state.onlineUsers, userId]),
-				}));
-			});
-
-			socket.on("user_disconnected", (userId: string) => {
+			
+			socket.on("user_connected", (connectedUserId: string) => {
+				console.log("🟢 [Frontend] User connected:", connectedUserId);
 				set((state) => {
 					const newOnlineUsers = new Set(state.onlineUsers);
-					newOnlineUsers.delete(userId);
+					newOnlineUsers.add(connectedUserId);
 					return { onlineUsers: newOnlineUsers };
 				});
 			});
-
-			socket.on("receive_message", (message: Message) => {
-				set((state) => ({
-					messages: [...state.messages, message],
-				}));
-			});
-
-			socket.on("message_sent", (message: Message) => {
-				set((state) => ({
-					messages: [...state.messages, message],
-				}));
-			});
-
-			socket.on("activity_updated", ({ userId, activity }) => {
+			
+			socket.on("user_disconnected", (disconnectedUserId: string) => {
+				console.log("⚫ [Frontend] User disconnected:", disconnectedUserId);
 				set((state) => {
-					const newActivities = new Map(state.userActivities);
-					newActivities.set(userId, activity);
-					return { userActivities: newActivities };
+					const newOnlineUsers = new Set(state.onlineUsers);
+					newOnlineUsers.delete(disconnectedUserId);
+					return { onlineUsers: newOnlineUsers };
 				});
 			});
-
-			socket.on("message_error", (error: string) => {
-				console.error("Message error:", error);
-				// You can show a toast here if needed
-				// toast.error(error);
+			
+		socket.on("activity_updated", ({ userId: activityUserId, activity }: { userId: string; activity: string }) => {
+			console.log("🎵 [Frontend] Activity updated:", activityUserId, activity);
+			set((state) => {
+				const newActivities = new Map(state.userActivities);
+				newActivities.set(activityUserId, activity);
+				return { userActivities: newActivities };
 			});
+		});
 
+		// Friend request events
+		socket.on("new_friend_request", (request: any) => {
+			console.log("📨 [Frontend] New friend request received:", request);
+			
+			// Dynamically import to avoid circular dependency
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().fetchPendingRequests();
+			});
+			
+			// Show toast notification
+			import("react-hot-toast").then(({ default: toast }) => {
+				toast.success(`${request.senderData?.fullName || "Someone"} sent you a friend request!`, {
+					duration: 4000,
+					icon: "👋",
+				});
+			});
+		});
+
+		socket.on("friend_request_accepted", (data: any) => {
+			console.log("✅ [Frontend] Friend request accepted - RAW DATA:", JSON.stringify(data, null, 2));
+			console.log("  - accepterName:", data.accepterName);
+			console.log("  - accepterImageUrl:", data.accepterImageUrl);
+			console.log("  - accepterId:", data.accepterId);
+			console.log("  - friendId:", data.friendId);
+			
+			console.log("🔔 [Frontend] Dispatching custom event: friend-request-accepted");
+			
+			// Trigger dialog through custom event
+			const customEvent = new CustomEvent("friend-request-accepted", { 
+				detail: data 
+			});
+			window.dispatchEvent(customEvent);
+			
+			console.log("✅ [Frontend] Custom event dispatched successfully");
+			
+			// Refresh friends list
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().fetchPendingRequests();
+			});
+		});
+
+		socket.on("friend_request_rejected", ({ rejectedBy }) => {
+			console.log("❌ [Frontend] Friend request rejected by:", rejectedBy);
+			
+			// Update search results to show "stranger" status
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
+			});
+		});
+				// Connect AFTER listeners are setup
+		socket.connect();
+		
+		// Emit user_connected AFTER socket is connected
+		socket.on("connect", () => {
+			console.log("✅ [Frontend] Socket connected, emitting user_connected");
+			socket.emit("user_connected", userId);
 			set({ isConnected: true });
-		}
-	},
+		});
+		
+		socket.on("connect_error", (error) => {
+			console.error("❌ [Frontend] Socket connection error:", error);
+		});
 
-	disconnectSocket: () => {
+		socket.on("activities", (activities: Record<string, string>) => {
+			console.log("🎵 [Frontend] Received activities:", Object.keys(activities).length);
+			set({ userActivities: new Map(Object.entries(activities)) });
+		});
+
+		socket.on("receive_message", (message: Message) => {
+			set((state) => ({
+				messages: [...state.messages, message],
+			}));
+		});
+
+		socket.on("message_sent", (message: Message) => {
+			set((state) => ({
+				messages: [...state.messages, message],
+			}));
+		});
+
+		socket.on("message_error", (error: string) => {
+			console.error("Message error:", error);
+			// You can show a toast here if needed
+			// toast.error(error);
+		});
+	}
+},	disconnectSocket: () => {
 		if (get().isConnected) {
 			socket.disconnect();
 			set({ isConnected: false });

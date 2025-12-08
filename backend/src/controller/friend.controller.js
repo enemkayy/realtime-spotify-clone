@@ -82,6 +82,24 @@ export const sendFriendRequest = async (req, res, next) => {
     await targetUser.save();
     await sender.save();
 
+    // Observer Pattern: Notify target user via Subject
+    const io = req.app.get("io");
+    if (io && io.activitySubject) {
+      const request = targetUser.friendRequests[targetUser.friendRequests.length - 1];
+      io.activitySubject.friendRequestReceived(targetUser.clerkId, {
+        _id: request._id,
+        from: sender._id,
+        status: "pending",
+        senderData: {
+          _id: sender._id,
+          fullName: sender.fullName,
+          imageUrl: sender.imageUrl,
+          clerkId: sender.clerkId,
+        },
+      });
+      console.log(`📨 [Observer] Friend request notification sent to ${targetUser.clerkId}`);
+    }
+
     res.status(200).json({ message: "Friend request sent successfully" });
   } catch (error) {
     console.error("Error in sendFriendRequest:", error);
@@ -104,7 +122,7 @@ export const acceptFriendRequest = async (req, res, next) => {
     // Find the request by _id (NOT by from field)
     const requestIndex = currentUser.friendRequests.findIndex(
       (req) => req._id.toString() === requestId && req.status === "pending"
-      //       ^^^ Changed from req.from to req._id
+      
     );
 
     if (requestIndex === -1) {
@@ -141,6 +159,20 @@ export const acceptFriendRequest = async (req, res, next) => {
     await currentUser.save();
     await sender.save();
 
+    // Observer Pattern: Notify both users of acceptance
+    const io = req.app.get("io");
+    if (io && io.activitySubject) {
+      io.activitySubject.friendRequestAccepted(
+        currentUser.clerkId,
+        sender.clerkId,
+        {
+          fullName: currentUser.fullName,
+          imageUrl: currentUser.imageUrl,
+        }
+      );
+      console.log(`✅ [Observer] Friend request acceptance notification sent`);
+    }
+
     res.status(200).json({
       message: "Friend request accepted",
       friend: {
@@ -167,25 +199,34 @@ export const rejectFriendRequest = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Find and update request
+    // Find request by _id (not sender ID)
     const requestIndex = currentUser.friendRequests.findIndex(
-      (req) => req.from.toString() === requestId && req.status === "pending"
+      (req) => req._id.toString() === requestId && req.status === "pending"
     );
 
     if (requestIndex === -1) {
       return res.status(404).json({ message: "Friend request not found" });
     }
 
+    const senderId = currentUser.friendRequests[requestIndex].from;
+
     // Update status to rejected
     currentUser.friendRequests[requestIndex].status = "rejected";
 
     // Remove from sender's sent requests
-    const sender = await User.findById(requestId);
+    const sender = await User.findById(senderId);
     if (sender) {
       sender.sentRequests = sender.sentRequests.filter(
         (id) => id.toString() !== currentUser._id.toString()
       );
       await sender.save();
+      
+      // Observer Pattern: Notify sender that request was rejected
+      const io = req.app.get("io");
+      if (io && io.activitySubject) {
+        io.activitySubject.friendRequestRejected(sender.clerkId, currentUser.clerkId);
+        console.log(`❌ [Observer] Friend request rejection notification sent to ${sender.clerkId}`);
+      }
     }
 
     await currentUser.save();
