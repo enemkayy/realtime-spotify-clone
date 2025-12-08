@@ -31,7 +31,7 @@ interface NewSong {
 }
 
 const MOODS = ["happy", "sad", "energetic", "calm", "romantic", "melancholic", "angry", "nostalgic"];
-const GENRES = ["Pop", "Rock", "Jazz", "Hip-Hop", "Electronic", "R&B", "Country", "Classical", "K-Pop", "Other"];
+const GENRES = ["Pop", "Rock", "Jazz", "Hip-Hop", "Electronic", "R&B", "Country", "Classical","V-Pop", "K-Pop", "Other"];
 const TEMPOS = [
 	{ value: "slow", label: "Slow" },
 	{ value: "medium", label: "Medium" },
