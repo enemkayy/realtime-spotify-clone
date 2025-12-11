@@ -27,6 +27,10 @@ const chatMessageSchema = new mongoose.Schema(
 			mood: String,
 			genre: String,
 		},
+		cacheInvalidated: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	{ timestamps: true }
 );

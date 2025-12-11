@@ -23,6 +23,64 @@ export const chatWithAI = async (req, res, next) => {
       return res.status(400).json({ message: "Message is required" });
     }
 
+    // Check for cached response (within 5 minutes, not invalidated)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    // First, find recent user message with same content
+    const recentUserMessage = await ChatMessage.findOne({
+      userId,
+      role: "user",
+      content: { $regex: new RegExp(`^${message.trim()}$`, "i") },
+      createdAt: { $gte: fiveMinutesAgo },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (recentUserMessage) {
+      // Find the assistant response right after this user message
+      const assistantResponse = await ChatMessage.findOne({
+        userId,
+        role: "assistant",
+        createdAt: { $gt: recentUserMessage.createdAt },
+        recommendations: { $exists: true, $ne: [] },
+        cacheInvalidated: { $ne: true }, // ✅ Check invalidation on assistant message
+      })
+        .populate("recommendations")
+        .lean();
+
+      if (assistantResponse) {
+        console.log("✅ Using cached response (saved API call)");
+        
+        // Save user message to database even when using cache
+        await ChatMessage.create({
+          userId,
+          role: "user",
+          content: message,
+          cacheInvalidated: false,
+        });
+
+        // Save assistant response (copy from cache) to maintain chat history
+        await ChatMessage.create({
+          userId,
+          role: "assistant",
+          content: assistantResponse.content,
+          recommendations: assistantResponse.recommendations.map(song => song._id),
+          metadata: assistantResponse.metadata,
+          cacheInvalidated: false,
+        });
+
+        return res.status(200).json({
+          message: assistantResponse.content,
+          songs: assistantResponse.recommendations,
+          reason: assistantResponse.metadata?.reason,
+          mood: assistantResponse.metadata?.mood,
+          cached: true,
+        });
+      }
+    }
+
+    console.log("🔄 No valid cache - calling Gemini API");
+
     // 1. Lấy danh sách bài hát (giới hạn để tránh token limit)
     const allSongs = await Song.find().limit(50).lean();
 
@@ -47,6 +105,7 @@ export const chatWithAI = async (req, res, next) => {
         .flatMap((c) => c.recommendations)
         .slice(0, 5),
       preference,
+      chatHistory: chatHistory.slice(0, 6), // Last 3 exchanges (6 messages)
     };
 
     // 5. Gọi AI để gợi ý
@@ -57,9 +116,10 @@ export const chatWithAI = async (req, res, next) => {
       userId,
       role: "user",
       content: message,
+      cacheInvalidated: false,
     });
 
-    // 7. Lưu AI response
+    // 7. Lưu AI response (fresh, not invalidated)
     await ChatMessage.create({
       userId,
       role: "assistant",
@@ -69,6 +129,7 @@ export const chatWithAI = async (req, res, next) => {
         reason: aiResponse.reason,
         mood: aiResponse.mood || preference.mood,
       },
+      cacheInvalidated: false,
     });
 
     // 8. Lấy thông tin chi tiết các bài hát được gợi ý

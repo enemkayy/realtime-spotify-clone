@@ -1,5 +1,6 @@
 import { Song } from "../models/song.model.js";
 import { Album } from "../models/album.model.js";
+import { ChatMessage } from "../models/chatMessage.model.js";
 import cloudinary from "../lib/cloudinary.js";
 
 // helper function for cloudinary uploads
@@ -62,6 +63,19 @@ export const createSong = async (req, res, next) => {
         $push: { songs: song._id },
       });
     }
+
+    // Invalidate AI chat cache when songs database changes
+    // This ensures users get fresh recommendations including the new song
+    await ChatMessage.updateMany(
+      { 
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+        recommendations: { $exists: true, $ne: [] }
+      },
+      { 
+        $set: { cacheInvalidated: true } 
+      }
+    );
+
     res.status(201).json(song);
   } catch (error) {
     console.log("Error in createSong", error);
@@ -83,6 +97,18 @@ export const deleteSong = async (req, res, next) => {
     }
 
     await Song.findByIdAndDelete(id);
+
+    // Invalidate AI chat cache when songs are deleted
+    // This prevents recommending deleted songs
+    await ChatMessage.updateMany(
+      { 
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+        recommendations: { $exists: true, $ne: [] }
+      },
+      { 
+        $set: { cacheInvalidated: true } 
+      }
+    );
 
     res.status(200).json({ message: "Song deleted successfully" });
   } catch (error) {

@@ -25,7 +25,7 @@ const AIChatInterface = () => {
   const { messages, isLoading, sendMessage, loadHistory, clearChat } =
     useAIChatStore();
   const [input, setInput] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { playAlbum } = usePlayerStore();
   const { user } = useUser();
 
@@ -33,10 +33,9 @@ const AIChatInterface = () => {
     loadHistory();
   }, [loadHistory]);
 
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const handleSend = async () => {
@@ -87,7 +86,7 @@ const AIChatInterface = () => {
 
       {/* Messages */}
       <ScrollArea className="h-[calc(100vh-340px)]">
-        <div className="p-4 space-y-4" ref={scrollRef}>
+        <div className="p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-12 space-y-6">
               <div className="size-20 rounded-full overflow-hidden border-2 border-purple-400/50">
@@ -221,6 +220,9 @@ const AIChatInterface = () => {
                   </div>
                 </div>
               )}
+              
+              {/* Invisible div at the end for auto-scroll */}
+              <div ref={messagesEndRef} />
             </>
           )}
         </div>

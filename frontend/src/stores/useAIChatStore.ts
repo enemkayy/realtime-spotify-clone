@@ -151,6 +151,7 @@ export const useAIChatStore = create<AIChatStore>((set) => ({
             const messages = Array.isArray(response.data)
                 ? response.data.map((msg: any) => ({
                         ...msg,
+                        songs: msg.recommendations || [], // Map 'recommendations' to 'songs'
                         createdAt: new Date(msg.createdAt),
                   }))
                 : [];

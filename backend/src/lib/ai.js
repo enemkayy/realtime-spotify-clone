@@ -61,59 +61,98 @@ const detectMoodFromKeywords = (userMessage) => {
 };
 
 /**
- * Filter songs by mood using title/artist keywords
- */
-/**
- * Filter songs by mood using title/artist keywords (STRICT - no fallback)
+ * Filter songs by mood using DATABASE FIELDS first, then keyword fallback
+ * Priority: 1. DB mood array, 2. DB genre, 3. DB description, 4. Title/Artist keywords
  */
 const filterSongsByMood = (songs, mood) => {
+  // Mood mapping for genre matching
+  const genreMapping = {
+    happy: ["pop", "dance", "k-pop", "disco"],
+    sad: ["ballad", "indie", "soul", "blues"],
+    energetic: ["rock", "metal", "electronic", "hip-hop", "edm"],
+    calm: ["acoustic", "ambient", "classical", "jazz", "lofi"],
+    romantic: ["r&b", "soul", "pop ballad", "acoustic"],
+    angry: ["metal", "punk", "hard rock", "rap"],
+  };
+
+  // Keyword patterns for title/artist/description fallback
   const moodKeywords = {
     happy: {
-      titles:
+      patterns:
         /(happy|joy|party|dance|upbeat|good|fun|celebration|smile|sunshine|wonderful|beautiful)/i,
       artists:
         /(pharrell|bruno mars|dua lipa|ariana grande|katy perry|justin timberlake|mark ronson)/i,
     },
     sad: {
-      titles:
+      patterns:
         /(sad|cry|hurt|lonely|miss|someone|stay|sorry|goodbye|broken|tears|lost|alone)/i,
       artists:
         /(adele|sam smith|lewis capaldi|billie eilish|sia|coldplay|james arthur)/i,
     },
     energetic: {
-      titles:
-        /(energy|power|strong|run|fight|alive|wild|thunder|fire|rock|metal|enemy|battle)/i,
+      patterns:
+        /(energy|power|strong|run|fight|alive|wild|thunder|fire|rock|metal|enemy|battle|warrior)/i,
       artists:
         /(imagine dragons|linkin park|foo fighters|ac\/dc|metallica|guns n roses)/i,
     },
     calm: {
-      titles:
-        /(calm|chill|relax|slow|peace|dream|sleep|night|moon|stars|ocean|waves)/i,
-      artists: /(norah jones|ed sheeran|john mayer|bon iver|james bay)/i,
-      // EXCLUDE energetic artists
-      exclude: /(imagine dragons|linkin park|metallica)/i,
+      patterns:
+        /(calm|chill|relax|slow|peace|dream|sleep|night|moon|stars|ocean|waves|quiet)/i,
+      artists: /(norah jones|john mayer|bon iver|james bay|jack johnson)/i,
     },
     romantic: {
-      titles:
-        /(love|heart|kiss|you|beautiful|forever|perfect|heaven|angel|together)/i,
+      patterns:
+        /(love|heart|kiss|you|beautiful|forever|perfect|heaven|angel|together|romance)/i,
       artists:
         /(ed sheeran|john legend|bruno mars|shawn mendes|taylor swift|ariana grande)/i,
+    },
+    angry: {
+      patterns: /(angry|rage|mad|fury|hate|scream|break|destroy)/i,
+      artists: /(rage against the machine|slipknot|korn|disturbed)/i,
     },
   };
 
   const keywords = moodKeywords[mood];
+  const genres = genreMapping[mood] || [];
+  
   if (!keywords) return [];
 
-  let matched = songs.filter(
-    (s) => keywords.titles.test(s.title) || keywords.artists.test(s.artist)
-  );
+  const matched = songs.filter((s) => {
+    // 1. PRIORITY: Check DB mood array (most reliable)
+    if (s.mood && Array.isArray(s.mood)) {
+      const moodLower = s.mood.map(m => m.toLowerCase());
+      if (moodLower.includes(mood.toLowerCase())) {
+        console.log(`✅ Matched "${s.title}" by DB mood field`);
+        return true;
+      }
+    }
 
-  // Apply exclusion filter if exists (for calm mood)
-  if (keywords.exclude) {
-    matched = matched.filter((s) => !keywords.exclude.test(s.artist));
-  }
+    // 2. Check DB genre field
+    if (s.genre) {
+      const genreLower = s.genre.toLowerCase();
+      if (genres.some(g => genreLower.includes(g))) {
+        console.log(`✅ Matched "${s.title}" by DB genre field (${s.genre})`);
+        return true;
+      }
+    }
 
-  return matched; // Return empty if no match (NOT all songs)
+    // 3. Check DB description field
+    if (s.description && keywords.patterns.test(s.description)) {
+      console.log(`✅ Matched "${s.title}" by DB description field`);
+      return true;
+    }
+
+    // 4. FALLBACK: Check title/artist keywords
+    if (keywords.patterns.test(s.title) || keywords.artists.test(s.artist)) {
+      console.log(`✅ Matched "${s.title}" by title/artist keywords`);
+      return true;
+    }
+
+    return false;
+  });
+
+  console.log(`🎯 filterSongsByMood(${mood}): Found ${matched.length} songs using DB fields + keywords`);
+  return matched;
 };
 
 /**
@@ -185,9 +224,36 @@ export const generateMusicRecommendation = async (userPrompt, context) => {
       )
       .join("\n");
 
-    const prompt = `You are a music expert. Recommend songs based on user request.
+    // Build chat history context if available
+    let chatHistoryContext = "";
+    if (context.chatHistory && context.chatHistory.length > 0) {
+      const history = context.chatHistory
+        .reverse() // Oldest first
+        .map((msg) => {
+          const role = msg.role === "user" ? "User" : "Assistant";
+          let content = `${role}: ${msg.content}`;
+          if (msg.role === "assistant" && msg.recommendations?.length > 0) {
+            // Get song titles from IDs
+            const songTitles = msg.recommendations
+              .map((songId) => {
+                const song = context.songs.find((s) => s.id === songId.toString());
+                return song ? `"${song.title}" by ${song.artist}` : null;
+              })
+              .filter(Boolean)
+              .join(", ");
+            if (songTitles) {
+              content += ` [Recommended: ${songTitles}]`;
+            }
+          }
+          return content;
+        })
+        .join("\n");
+      chatHistoryContext = `\n\nRecent conversation history:\n${history}\n`;
+    }
 
-User request: "${userPrompt}"
+    const prompt = `You are a music expert. Recommend songs based on user request.
+${chatHistoryContext}
+Current user request: "${userPrompt}"
 
 Available songs in database:
 ${songsInfo}
@@ -195,14 +261,24 @@ ${songsInfo}
 IMPORTANT RULES:
 1. ONLY recommend songs from the list above
 2. Use the EXACT song IDs provided (they look like MongoDB ObjectIDs)
-3. Match songs based on:
-   - Artist name (if user mentions specific artist like "Sơn Tùng", ONLY recommend that artist)
-   - Song title keywords
+3. DETECT USER INTENT FIRST:
+   - If user asks for ONE SPECIFIC SONG (e.g., "play Enemy", "I want Nơi này có anh") → Check if that EXACT song exists in the list
+     * IF FOUND → Return ONLY that 1 song
+     * IF NOT FOUND → Return EMPTY array with message "Sorry, I couldn't find [song name] in the library"
+     * DO NOT substitute with other songs by the same artist!
+   - If user asks for RECOMMENDATIONS/SIMILAR (e.g., "similar songs", "songs like", "recommend me") → Return multiple songs
+   - If user asks for MOOD/GENRE (e.g., "happy songs", "energetic music") → Return multiple matching songs
+   - If user asks for ARTIST SONGS (e.g., "Sơn Tùng songs", "Imagine Dragons music") → Return all songs by that artist
+4. Match songs based on:
+   - Song title keywords (exact match has HIGHEST priority)
+   - Artist name (if user mentions specific artist)
    - Your knowledge of artist's music style and mood
    - For example: "Enemy" by Imagine Dragons is ENERGETIC/INTENSE, not calm
-4. If there are fewer than 3 matching songs, that's okay - recommend only what truly fits
-5. Better to recommend 1-2 perfect matches than 6 wrong songs
-6. Detect the mood from user's request (happy/sad/energetic/calm/romantic/etc)
+5. PAY ATTENTION to conversation history:
+   - If user says "similar to it", "like that", "the previous one" → Look at recent recommendations
+   - Understand context references from chat history
+6. Better to return NOTHING than return the WRONG song
+7. Detect the mood from user's request (happy/sad/energetic/calm/romantic/etc)
 
 Examples of artist moods you should know:
 - Imagine Dragons = energetic, powerful, intense rock
@@ -261,6 +337,49 @@ Return ONLY this JSON structure, no extra text:
     let matched = [];
     let mood = "mixed";
 
+    // 0. PRIORITY: Check for SPECIFIC SONG REQUEST
+    // Patterns: "play [song]", "listen to [song]", "I want [song]", "put on [song]"
+    const specificSongPattern = /^(play|listen to|i want|put on|nghe|cho tôi nghe|tôi muốn nghe)\s+(.+)$/i;
+    const specificMatch = userPrompt.match(specificSongPattern);
+    
+    if (specificMatch) {
+      const songName = specificMatch[2].trim().toLowerCase();
+      console.log(`🎯 Detected specific song request: "${songName}"`);
+      
+      // Try exact match first
+      let exactMatch = context.songs.find(s => 
+        s.title.toLowerCase() === songName
+      );
+      
+      // If no exact match, try partial match
+      if (!exactMatch) {
+        exactMatch = context.songs.find(s => 
+          s.title.toLowerCase().includes(songName) ||
+          songName.includes(s.title.toLowerCase())
+        );
+      }
+      
+      if (exactMatch) {
+        console.log(`✅ Found exact match: "${exactMatch.title}" by ${exactMatch.artist}`);
+        return {
+          message: `Playing "${exactMatch.title}" by ${exactMatch.artist}`,
+          recommendations: [exactMatch.id],
+          reason: "Exact song match",
+          mood: "specific",
+          matchScore: 100,
+        };
+      } else {
+        console.log(`❌ Song "${songName}" not found in database`);
+        return {
+          message: `Sorry, I couldn't find "${specificMatch[2]}" in the library. Try asking for a different song or mood!`,
+          recommendations: [],
+          reason: "Song not found in database",
+          mood: "specific",
+          matchScore: 0,
+        };
+      }
+    }
+
     // 1. Check for specific artist
     const artistMatch = context.songs.filter((s) =>
       userLower.includes(s.artist.toLowerCase())
@@ -275,16 +394,23 @@ Return ONLY this JSON structure, no extra text:
       if (detectedMood) {
         const filtered = filterSongsByMood(context.songs, detectedMood);
 
-        // ONLY use filtered if they actually matched keywords
-        // If filterSongsByMood returns all songs (no match), return empty
-        if (filtered.length < context.songs.length) {
+        // Use filtered results if we got meaningful matches
+        // If >80% of all songs match, keywords might be too generic - still use but limit to 6
+        if (filtered.length > 0 && filtered.length <= context.songs.length * 0.8) {
           matched = filtered;
           mood = detectedMood;
           console.log(
             `Found ${matched.length} ${mood} songs using keyword matching`
           );
+        } else if (filtered.length > context.songs.length * 0.8) {
+          // Too many matches - use subset
+          matched = filtered.slice(0, 6);
+          mood = detectedMood;
+          console.log(
+            `Found ${filtered.length} ${mood} songs (using top 6)`
+          );
         } else {
-          // No keyword match - be honest
+          // No matches
           matched = [];
           mood = detectedMood;
           console.log(`No ${mood} songs found in database`);
@@ -297,7 +423,7 @@ Return ONLY this JSON structure, no extra text:
       return {
         message: `I couldn't find any ${
           mood !== "mixed" ? mood : ""
-        } songs in your library yet. Try adding more songs or ask for something else!`,
+        } songs in the library yet. Want me to suggest another mood or genre instead?`,
         recommendations: [],
         reason: `No songs match the ${mood} mood in current database`,
         mood: mood,
@@ -391,21 +517,24 @@ Return ONLY this JSON:
   } catch (error) {
     console.error("❌ Gemini similarity error:", error.message);
 
-    // Fallback: same artist first
+    // Fallback: same artist only - DON'T return random songs
     const sameArtist = allSongs
-      .filter((s) => s.artist.toLowerCase() === targetSong.artist.toLowerCase())
+      .filter((s) => s.artist.toLowerCase() === targetSong.artist.toLowerCase() && s.id !== targetSong.id)
       .slice(0, 5);
 
+    if (sameArtist.length === 0) {
+      // No similar songs found - be honest
+      return {
+        similarSongs: [],
+        reason: `No similar songs found in the current library. The database doesn't have other songs by ${targetSong.artist} or with similar style.`,
+        matchCriteria: [],
+      };
+    }
+
     return {
-      similarSongs: (sameArtist.length > 0
-        ? sameArtist
-        : allSongs.slice(0, 5)
-      ).map((s) => s.id),
-      reason:
-        sameArtist.length > 0
-          ? `Same artist as ${targetSong.artist}`
-          : "Popular recommendations",
-      matchCriteria: ["artist"],
+      similarSongs: sameArtist.map((s) => s.id),
+      reason: `Songs by ${targetSong.artist}`,
+      matchCriteria: ["same artist"],
     };
   }
 };
