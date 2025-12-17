@@ -22,6 +22,11 @@ const FriendsActivity = () => {
   } = useFriendStore();
   const { user } = useUser();
   const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);
+  
+  // 🔥 Debug: Log when userActivities changes
+  useEffect(() => {
+    console.log("🔄 [FriendsActivity] userActivities changed:", userActivities);
+  }, [userActivities]);
 
   useEffect(() => {
     if (user) {
@@ -36,6 +41,11 @@ const FriendsActivity = () => {
 
   // Map closeFriends array to a Set for faster lookup
   const closeFriendIds = new Set(closeFriends.map((f) => f._id));
+  
+  // 🔥 Debug: Log close friends
+  useEffect(() => {
+    console.log("🔄 [FriendsActivity] closeFriends changed:", closeFriends.length, closeFriendIds);
+  }, [closeFriends]);
 
   // Sort friends: Close friends first, then alphabetically
   const sortedFriends = [...friends].sort((a, b) => {
@@ -109,7 +119,7 @@ const FriendsActivity = () => {
           )}
 
           {sortedFriends.map((friend) => {
-            const activity = userActivities.get(friend.clerkId);
+            const activity = userActivities[friend.clerkId];
             const isOnline = onlineUsers.has(friend.clerkId);
 
             // Check if I added this friend to MY close friends (for heart icon)
@@ -126,7 +136,9 @@ const FriendsActivity = () => {
               );
             const isPlaying = activity && activity !== "Idle";
 
-            // Privacy rule: Only show song if friend added me to their close friends
+            // 🔥 Privacy rule: Show song details ONLY if THEY added ME to THEIR close friends
+            // VD: A muốn thấy B play → B phải add A vào close friends của B
+            // Không phải: A add B vào close friends của A
             const showSongDetails = theyAddedMeToCloseFriends && isPlaying;
 
             return (

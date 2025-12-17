@@ -157,10 +157,12 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axiosInstance.get("/friends/close");
-			set({ closeFriends: Array.isArray(response.data) ? response.data : [] });
+			const closeFriendsList = Array.isArray(response.data) ? response.data : [];
+			console.log("📋 [fetchCloseFriends] Response:", closeFriendsList.length, "close friends", closeFriendsList);
+			set({ closeFriends: closeFriendsList });
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.message || "Failed to fetch close friends";
-			console.error("fetchCloseFriends error:", errorMessage);
+			console.error("❌ [fetchCloseFriends] Error:", errorMessage);
 			set({ error: errorMessage, closeFriends: [] }); // Set empty array on error
 		} finally {
 			set({ isLoading: false });
@@ -174,9 +176,10 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
 			// Find friend and add to close friends
 			const friend = get().friends.find((f) => f._id === friendId);
 			if (friend) {
-				set((state) => ({
-					closeFriends: [...state.closeFriends, friend],
-				}));
+				// 🔥 Use a completely new array reference to trigger re-render
+				const newCloseFriends = [...get().closeFriends, friend];
+				set({ closeFriends: newCloseFriends });
+				console.log("✅ [useFriendStore] Added to close friends, new count:", newCloseFriends.length);
 			}
 		} catch (error: any) {
 			set({ error: error.response?.data?.message || "Failed to add close friend" });
@@ -190,9 +193,9 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			await axiosInstance.delete(`/friends/close/${friendId}`);
-			set((state) => ({
-				closeFriends: state.closeFriends.filter((friend) => friend._id !== friendId),
-			}));
+			const newCloseFriends = get().closeFriends.filter((friend) => friend._id !== friendId);
+			set({ closeFriends: newCloseFriends });
+			console.log("❌ [useFriendStore] Removed from close friends, new count:", newCloseFriends.length);
 		} catch (error: any) {
 			set({ error: error.response?.data?.message || "Failed to remove close friend" });
 			throw error;
