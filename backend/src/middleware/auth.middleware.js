@@ -2,13 +2,13 @@ import { clerkClient } from "@clerk/express";
 
 export const protectRoute = async (req, res, next) => {
 	// Debug logs
-	console.log("🔍 protectRoute check:");
+	console.log("protectRoute check:");
 	console.log("- req.auth:", req.auth);
 	console.log("- userId:", req.auth?.userId);
 	console.log("- headers:", req.headers.authorization);
 	
 	if (!req.auth?.userId) {
-		console.error("❌ No userId found in request");
+		console.error("No userId found in request");
 		return res.status(401).json({ message: "Unauthorized - you must be logged in" });
 	}
 	
@@ -18,7 +18,7 @@ export const protectRoute = async (req, res, next) => {
 
 export const requireAdmin = async (req, res, next) => {
 	try {
-		console.log("👑 requireAdmin check:");
+		console.log("requireAdmin check:");
 		console.log("- ADMIN_EMAIL from .env:", process.env.ADMIN_EMAIL);
 		
 		const currentUser = await clerkClient.users.getUser(req.auth.userId);

@@ -10,7 +10,7 @@ interface ChatStore {
 	socket: any;
 	isConnected: boolean;
 	onlineUsers: Set<string>;
-	userActivities: Map<string, string>;
+	userActivities: Record<string, string>;
 	messages: Message[];
 	selectedUser: User | null;
 	isAIChat: boolean; // NEW: track if AI chat is active
@@ -38,7 +38,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	socket: socket,
 	isConnected: false,
 	onlineUsers: new Set(),
-	userActivities: new Map(),
+	userActivities: {},
 	messages: [],
 	selectedUser: null,
 	isAIChat: false, // NEW
@@ -93,11 +93,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 			
 		socket.on("activity_updated", ({ userId: activityUserId, activity }: { userId: string; activity: string }) => {
 			console.log("🎵 [Frontend] Activity updated:", activityUserId, activity);
-			set((state) => {
-				const newActivities = new Map(state.userActivities);
-				newActivities.set(activityUserId, activity);
-				return { userActivities: newActivities };
-			});
+			set((state) => ({
+				userActivities: { ...state.userActivities, [activityUserId]: activity },
+			}));
 		});
 
 		// Friend request events
@@ -149,6 +147,39 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 				useFriendStore.getState().updateSearchResultStatus(rejectedBy, "stranger");
 			});
 		});
+
+		socket.on("close_friend_activity_sync", ({ userId, activity }) => {
+			console.log("⭐ [Frontend] Received close_friend_activity_sync event");
+			console.log("   - userId (who added me):", userId);
+			console.log("   - activity:", activity);
+			
+			// 🔥 CRITICAL: Create a new object to trigger re-render
+			set((state) => {
+				const newActivities = { ...state.userActivities, [userId]: activity };
+				console.log(`✅ [Frontend] Updated activity for ${userId} to: ${activity}`);
+				console.log(`✅ [Frontend] Total activities in store: ${Object.keys(newActivities).length}`);
+				console.log(`✅ [Frontend] Triggering re-render with new object`);
+				return { userActivities: newActivities };
+			});
+			
+			// Also refresh friends list to update the friend.closeFriends field
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				console.log("🔄 [Frontend] Refreshing friends list to update closeFriends data...");
+				useFriendStore.getState().fetchFriends();
+			});
+		});
+
+		socket.on("removed_from_close_friend", ({ userId }) => {
+			console.log("❌ [Frontend] Received removed_from_close_friend event");
+			console.log("   - userId (who removed me):", userId);
+			
+			// Need to refresh FRIENDS (not close friends) to update the friend.closeFriends field
+			// This field is populated from backend and shows who added ME to THEIR close friends
+			import("./useFriendStore").then(({ useFriendStore }) => {
+				console.log("🔄 [Frontend] Refreshing friends list to update closeFriends data...");
+				useFriendStore.getState().fetchFriends();
+			});
+		});
 				// Connect AFTER listeners are setup
 		socket.connect();
 		
@@ -165,7 +196,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
 		socket.on("activities", (activities: Record<string, string>) => {
 			console.log("🎵 [Frontend] Received activities:", Object.keys(activities).length);
-			set({ userActivities: new Map(Object.entries(activities)) });
+			set({ userActivities: activities });
 		});
 
 		socket.on("receive_message", (message: Message) => {

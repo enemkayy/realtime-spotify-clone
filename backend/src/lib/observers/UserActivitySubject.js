@@ -11,18 +11,18 @@ export class UserActivitySubject {
   // Attach observer (socket connection)
   attach(observer) {
     this.observers.add(observer);
-    console.log(`✅ Observer attached. Total: ${this.observers.size}`);
+    console.log(`Observer attached. Total: ${this.observers.size}`);
   }
 
   // Detach observer (socket disconnect)
   detach(observer) {
     this.observers.delete(observer);
-    console.log(`❌ Observer detached. Total: ${this.observers.size}`);
+    console.log(`Observer detached. Total: ${this.observers.size}`);
   }
 
   // Notify all observers
   notify(event, data) {
-    console.log(`📢 Notifying ${this.observers.size} observers: ${event}`);
+    console.log(`Notifying ${this.observers.size} observers: ${event}`);
     
     let count = 0;
     this.observers.forEach((observer) => {
@@ -74,7 +74,7 @@ export class UserActivitySubject {
 
   // Business logic: Friend request received
   friendRequestReceived(targetUserId, request) {
-    console.log(`📨 Friend request: ${request.from.fullName} → ${targetUserId}`);
+    console.log(`Friend request: ${request.from.fullName} → ${targetUserId}`);
     
     this.notify("friend_request_received", {
       targetUserId,
@@ -100,6 +100,31 @@ export class UserActivitySubject {
     this.notify("friend_request_rejected", {
       senderId,
       rejecterId,
+    });
+  }
+
+  // Business logic: Added to close friend
+  addedToCloseFriend(addedByUserId, friendId, currentActivity) {
+    console.log(`⭐ [Subject] ${addedByUserId} added ${friendId} to close friends`);
+    console.log(`⭐ [Subject] Current activity to send: ${currentActivity}`);
+    console.log(`⭐ [Subject] Number of observers: ${this.observers.size}`);
+    
+    // Notify the friend who was added so they can see the adder's activity immediately
+    this.notify("added_to_close_friend", {
+      addedByUserId,
+      friendId,
+      currentActivity,
+    });
+  }
+
+  // Business logic: Removed from close friend
+  removedFromCloseFriend(removedByUserId, friendId) {
+    console.log(`❌ [Subject] ${removedByUserId} removed ${friendId} from close friends`);
+    
+    // Notify the friend who was removed so they stop seeing the remover's activity
+    this.notify("removed_from_close_friend", {
+      removedByUserId,
+      friendId,
     });
   }
 

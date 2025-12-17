@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // WORKING MODEL (gemini model)
-const WORKING_MODEL = "models/gemini-2.5-flash";
+const WORKING_MODEL = "models/gemini-2.5-flash-lite";
 
 /**
  * Helper: Clean JSON response from Gemini

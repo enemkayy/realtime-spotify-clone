@@ -421,6 +421,29 @@ export const addCloseFriend = async (req, res, next) => {
     currentUser.closeFriends.push(friendId);
     await currentUser.save();
 
+    // Get the friend to notify them
+    const friend = await User.findById(friendId);
+    
+    // Observer Pattern: Notify friend about being added to close friend
+    const io = req.app.get("io");
+    if (io && io.activitySubject && friend) {
+      // Get current activity of the person who added them
+      const currentActivity = io.activitySubject.userActivities.get(currentUserClerkId) || "Idle";
+      
+      console.log("=== ADD CLOSE FRIEND DEBUG ===");
+      console.log("Current user (adder):", currentUserClerkId);
+      console.log("Friend (added):", friend.clerkId);
+      console.log("Current activity:", currentActivity);
+      console.log("Is friend online?", io.activitySubject.onlineUsers.has(friend.clerkId));
+      console.log("All activities:", Object.fromEntries(io.activitySubject.userActivities));
+      console.log("==============================");
+      
+      io.activitySubject.addedToCloseFriend(currentUserClerkId, friend.clerkId, currentActivity);
+      console.log(`⭐ [Observer] Notified ${friend.clerkId} about being added to close friend by ${currentUserClerkId}`);
+    } else {
+      console.log("⚠️ Cannot notify friend: io or activitySubject or friend not available");
+    }
+
     res.status(200).json({ message: "Added to close friends" });
   } catch (error) {
     console.error("Error in addCloseFriend:", error);
@@ -439,12 +462,32 @@ export const removeCloseFriend = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const beforeCount = currentUser.closeFriends.length;
     currentUser.closeFriends = currentUser.closeFriends.filter(
       (id) => id.toString() !== friendId
     );
+    const afterCount = currentUser.closeFriends.length;
+    
+    console.log(`=== REMOVE CLOSE FRIEND DEBUG ===`);
+    console.log(`Current user: ${currentUserClerkId}`);
+    console.log(`Removing friend ID: ${friendId}`);
+    console.log(`Close friends count before: ${beforeCount}`);
+    console.log(`Close friends count after: ${afterCount}`);
+    console.log(`===================================`);
+    
     await currentUser.save();
 
-    res.status(200).json({ message: "Removed from close friends" });
+    // Get the friend to notify them
+    const friend = await User.findById(friendId);
+    
+    // Observer Pattern: Notify friend about being removed from close friend
+    const io = req.app.get("io");
+    if (io && io.activitySubject && friend) {
+      console.log(`❌ [Observer] Notified ${friend.clerkId} about being removed from close friend by ${currentUserClerkId}`);
+      io.activitySubject.removedFromCloseFriend(currentUserClerkId, friend.clerkId);
+    }
+
+    res.status(200).json({ message: "Removed from close friends", closeFriendsCount: afterCount });
   } catch (error) {
     console.error("Error in removeCloseFriend:", error);
     next(error);
@@ -463,6 +506,8 @@ export const getCloseFriends = async (req, res, next) => {
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    console.log(`📋 [getCloseFriends] User ${currentUserClerkId} has ${currentUser.closeFriends.length} close friends`);
 
     res.status(200).json(currentUser.closeFriends || []);
   } catch (error) {
