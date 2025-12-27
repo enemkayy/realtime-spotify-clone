@@ -44,7 +44,7 @@ export const FriendRequestAcceptedDialog = ({
           </div>
 
           <DialogTitle className="text-center text-2xl">
-            Friend Request Accepted! 🎉
+            Friend Request Accepted! 
           </DialogTitle>
 
           <DialogDescription
